@@ -1,0 +1,72 @@
+"""Application configuration loaded from environment variables (and an optional .env file)."""
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+APP_VERSION = "0.1.0"
+DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5"
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    app_name: str = "PharmaLens"
+    environment: Literal["development", "test", "production"] = "development"
+
+    anthropic_api_key: SecretStr | None = None
+    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL
+
+    supabase_url: str | None = None
+    supabase_anon_key: SecretStr | None = None
+    supabase_service_role_key: SecretStr | None = None
+
+    frontend_url: str = "http://localhost:5173"
+    # Extra comma-separated origins (e.g. Vercel preview URLs). Never "*" in production.
+    additional_cors_origins: str = ""
+
+    ncbi_api_key: SecretStr | None = None
+    # Allow signed-out users to run research (sessions are unlisted, reachable only by their UUID).
+    demo_mode: bool = True
+    anon_sessions_per_hour: int = Field(default=6, ge=0)
+    max_concurrent_research: int = Field(default=3, ge=1)
+
+    http_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
+
+    @field_validator("anthropic_model", mode="before")
+    @classmethod
+    def _default_model_when_blank(cls, value: object) -> object:
+        # An empty ANTHROPIC_MODEL= line in .env should fall back to the default, not an empty string.
+        if value is None or (isinstance(value, str) and not value.strip()):
+            return DEFAULT_ANTHROPIC_MODEL
+        return value
+
+    @field_validator(
+        "anthropic_api_key", "supabase_anon_key", "supabase_service_role_key", "ncbi_api_key", mode="before"
+    )
+    @classmethod
+    def _blank_secret_is_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @property
+    def cors_origins(self) -> list[str]:
+        origins = [self.frontend_url.rstrip("/")]
+        origins += [o.strip().rstrip("/") for o in self.additional_cors_origins.split(",") if o.strip()]
+        return [o for o in dict.fromkeys(origins) if o != "*"]
+
+    @property
+    def anthropic_configured(self) -> bool:
+        return self.anthropic_api_key is not None
+
+    @property
+    def supabase_configured(self) -> bool:
+        return bool(self.supabase_url) and self.supabase_service_role_key is not None
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

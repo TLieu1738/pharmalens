@@ -1,0 +1,289 @@
+{
+ "version": "6.9",
+ "hitCount": 62262,
+ "nextCursorMark": "AoIIQMzQMCg1Njg1Mjg1OA==",
+ "nextPageUrl": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=alzheimer+amyloid+tau&cursorMark=AoIIQMzQMCg1Njg1Mjg1OA%3D%3D&resultType=core&pageSize=3&format=json",
+ "request": {
+  "queryString": "alzheimer amyloid tau",
+  "resultType": "core",
+  "cursorMark": "*",
+  "pageSize": 3,
+  "sort": "",
+  "synonym": false
+ },
+ "resultList": {
+  "result": [
+   {
+    "id": "43056657",
+    "source": "MED",
+    "pmid": "43056657",
+    "doi": "10.1212/wnl.0000000000218786",
+    "title": "Relative Pericentral Tau Distribution in Cerebral Amyloid Angiopathy Compared With Alzheimer Disease.",
+    "authorString": "Su Y, Lu J, Xu J, Fu J, Xu F, Tang H, Yan T, Le S, Zhang H, Dong Q, Charidimou A, Tsai HH, Zuo C, Cheng X.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Su Y",
+       "lastName": "Su",
+       "firstName": "Ya",
+       "initials": "Y",
+       "authorId": {
+        "type": "ORCID",
+        "value": "0000-0002-2689-3148"
+       },
+       "authorAffiliationDetailsList": {
+        "authorAffiliation": [
+         {
+          "affiliation": "Department of Neurology, National Centre for Neurological Disorders, National Clinical Research Centre for Aging and Medicine, Huashan Hospital, Fudan University, Shanghai, China."
+         }
+        ]
+       }
+      },
+      {
+       "fullName": "Lu J",
+       "lastName": "Lu",
+       "firstName": "Jiaying",
+       "initials": "J",
+       "authorId": {
+        "type": "ORCID",
+        "value": "0000-0003-0927-0042"
+       },
+       "authorAffiliationDetailsList": {
+        "authorAffiliation": [
+         {
+          "affiliation": "Department of Nuclear Medicine and PET Centre, National Centre for Neurological Disorders, National Clinical Research Centre for Aging and Medicine, Huashan Hospital, Fudan University, Shanghai, China."
+         }
+        ]
+       }
+      },
+      {
+       "fullName": "Xu J",
+       "lastName": "Xu",
+       "firstName": "Jiajie",
+       "initials": "J",
+       "authorId": {
+        "type": "ORCID",
+        "value": "0000-0001-6819-4487"
+       },
+       "authorAffiliationDetailsList": {
+        "authorAffiliation": [
+         {
+          "affiliation": "Department of Neurology, National Centre for Neurological Disorders, National Clinical Research Centre for Aging and Medicine, Huashan Hospital, Fudan University, Shanghai, China."
+         }
+        ]
+       }
+      },
+      {
+       "fullName": "Fu J",
+       "lastName": "Fu",
+       "firstName": "Jiayu",
+       "initials": "J",
+       "authorAffiliationDetailsList": {
+        "authorAffiliation": [
+         {
+          "affiliation": "Department of Neurology, National Centre for Neurological Disorders, National Clinical Research Centre for Aging and Medicine, Huashan Hospital, Fudan University, Shanghai, China."
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "journalInfo": {
+     "issue": "12",
+     "volume": "107",
+     "journalIssueId": 4312337,
+     "dateOfPublication": "2026 Dec",
+     "monthOfPublication": 12,
+     "yearOfPublication": 2026,
+     "journal": {
+      "medlineAbbreviation": "Neurology",
+      "title": "Neurology",
+      "essn": "1526-632X",
+      "issn": "0028-3878",
+      "nlmid": "0401060",
+      "isoabbreviation": "Neurology"
+     },
+     "printPublicationDate": "2026-12-01"
+    },
+    "pubYear": "2026",
+    "pageInfo": "e218786",
+    "abstractText": "<h4>Background and objectives</h4>Differentiating cerebral amyloid angiopathy (CAA) from Alzheimer disease (AD) is essential for prognosis and clinical management. However, pathophysiology-based molecular biomarkers are lacking. Tau deposition may offer discriminative signals: It occurs late in primary cortices including pericentral cortex in AD but may emerge earlier and more diffusely in CAA. We investigated whether a pericentral-predominant pattern of tau deposition distinguishes CAA from AD and characterize its cortical spatial distribution and contributing factors in CAA.<h4>Methods</h4>We consecutively enrolled healthy controls and patients with CAA and AD with amyloid (18F-florbetapir) and tau (18F-florzolotau) PET. We compared pericentral tau-PET retention (both standardized uptake value ratios [SUVRs] and regional-to-global ratios) between CAA, AD, and controls and identified optimal cutoffs differentiating CAA from AD. We validated the discriminative performance using 18F-flortaucipir tau-PET in an external cohort. We assessed correlates of tau deposition in multivariable regression analyses and analyzed hierarchical patterns of tau involvement using conditional probability analyses in CAA.<h4>Results</h4>The derivation cohort included 22 controls, 80 CAA, and 64 AD (mean age 60.1, 68.4, and 66.3 years; 50.0%, 38.8%, and 50.0% female). The validation cohort included 65 CAA and 19 AD (mean age 74.1 and 73.6 years; 53.8% and 68.4% female). Patients with CAA showed higher global and pericentral tau SUVRs compared with controls but lower than AD. However, pericentral-to-global tau ratios were significantly higher in CAA than AD (0.93 \u00b1 0.07 vs 0.82 \u00b1 0.08, <i>p</i> < 0.001). A cutoff of 0.90 yielded 68.9% (95% CI 58.6-79.6) sensitivity and 87.1% (95% CI 79.1-96.1) specificity in the derivation cohort (AUC = 0.836, 95% CI 0.768-0.904) and 63.1% (95% CI 54.8-71.7) and 94.7% (95% CI 89.5-100), respectively, in the validation cohort (AUC = 0.844, 95% CI 0.747-0.940) for differentiating CAA from AD. In CAA, pericentral tau deposition correlated with regional amyloid deposition (coefficient 0.680, 95% CI 0.489-0.870, <i>p</i> < 0.001) and white matter hyperintensities volume (coefficient 0.001, 95% CI 0.00003-0.001, <i>p</i> = 0.040) and followed parieto-occipital cortices but preceded medial cortex involvement.<h4>Discussion</h4>Higher pericentral-to-global tau ratio differentiates CAA from AD and may reflect spatial distribution patterns potentially influenced by both amyloid and vascular pathology.",
+    "publicationStatus": "ppublish",
+    "language": "eng",
+    "pubModel": "Print-Electronic",
+    "pubTypeList": {
+     "pubType": [
+      "Comparative Study",
+      "Journal Article"
+     ]
+    },
+    "isOpenAccess": "N",
+    "inEPMC": "N",
+    "inPMC": "N",
+    "citedByCount": 0,
+    "hasReferences": "N",
+    "hasTextMinedTerms": "N",
+    "hasDbCrossReferences": "N",
+    "hasPDF": "N",
+    "hasBook": "N",
+    "hasSuppl": "N",
+    "hasLabsLinks": "N",
+    "hasData": "N",
+    "authMan": "N",
+    "epmcAuthMan": "N",
+    "nihAuthMan": "N",
+    "hasTMAccessionNumbers": "N",
+    "dateOfCompletion": "2026-11-19",
+    "dateOfCreation": "2026-11-19",
+    "dateOfRevision": "2026-11-19",
+    "electronicPublicationDate": "2026-11-19",
+    "firstPublicationDate": "2026-11-19",
+    "firstIndexDate": "2026-11-20",
+    "hasEvaluations": "N"
+   },
+   {
+    "id": "43048831",
+    "source": "MED",
+    "pmid": "43048831",
+    "doi": "10.2174/0115672050521798261029101323",
+    "title": "Microvascular Oxygen Delivery Dysfunction as a Contributory Neurovascular-Metabolic Mechanism in Alzheimer's Disease.",
+    "authorString": "Gabbay U.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Gabbay U",
+       "lastName": "Gabbay",
+       "firstName": "Uri",
+       "initials": "U",
+       "authorAffiliationDetailsList": {
+        "authorAffiliation": [
+         {
+          "affiliation": "Department of Epidemiology and Preventive Medicine, The School of Public Health, Gray Faculty of Medicine, Tel Aviv University, Tel Aviv, Israel."
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "journalInfo": {
+     "journalIssueId": 4314872,
+     "dateOfPublication": "2026 Nov",
+     "monthOfPublication": 11,
+     "yearOfPublication": 2026,
+     "journal": {
+      "medlineAbbreviation": "Curr Alzheimer Res",
+      "title": "Current Alzheimer research",
+      "essn": "1875-5828",
+      "issn": "1567-2050",
+      "nlmid": "101208441",
+      "isoabbreviation": "Curr Alzheimer Res"
+     },
+     "printPublicationDate": "2026-11-01"
+    },
+    "pubYear": "2026",
+    "abstractText": "Alzheimer's disease (AD) is characterized by amyloid-\u03b2 and tau pathology, neuroinflammation, synaptic dysfunction, and progressive neurodegeneration. Increasing evidence indicates that vascular dysfunction, impaired neurovascular coupling, blood-brain barrier disruption, and altered cerebral perfusion may contribute to disease vulnerability. However, the physiological mechanisms linking microvascular dysfunction to regional metabolic stress and established AD pathology remain incompletely defined. This article proposes a neurovascular-metabolic framework in which impaired cerebral microvascular oxygen delivery contributes to regional metabolic stress and may contribute to disease vulnerability and progression of Alzheimer-related pathological processes in susceptible individuals. The framework emphasizes capillary flow heterogeneity, neurovascular uncoupling, impaired oxygen extraction, pericyte-mediated capillary dysfunction, and neurovascular- unit abnormalities that may occur even in the absence of severe large-vessel ischemia. Rather than replacing amyloid- or tau-based models, the proposed framework places microvascular oxygen-delivery dysfunction within a broader network of interacting vascular, metabolic, inflammatory, and proteostatic processes. These disturbances may influence amyloidogenic processing, tau pathology, neuroinflammation, glymphatic clearance, and selective vulnerability of metabolically demanding regions such as the hippocampus and entorhinal cortex. The framework generates testable predictions involving regional oxygen extraction, microvascular flow, neurovascular coupling, and hypoxia-related signaling. If validated, interventions targeting cerebral microcirculation, neurovascular integrity, and metabolic homeostasis could complement established disease-modifying approaches.",
+    "publicationStatus": "aheadofprint",
+    "language": "eng",
+    "pubModel": "Print-Electronic",
+    "pubTypeList": {
+     "pubType": [
+      "Journal Article"
+     ]
+    },
+    "isOpenAccess": "N",
+    "inEPMC": "N",
+    "inPMC": "N",
+    "citedByCount": 0,
+    "hasReferences": "N",
+    "hasTextMinedTerms": "N",
+    "hasDbCrossReferences": "N",
+    "hasPDF": "N",
+    "hasBook": "N",
+    "hasSuppl": "N",
+    "hasLabsLinks": "N",
+    "hasData": "N",
+    "authMan": "N",
+    "epmcAuthMan": "N",
+    "nihAuthMan": "N",
+    "hasTMAccessionNumbers": "N",
+    "dateOfCreation": "2026-11-18",
+    "dateOfRevision": "2026-11-18",
+    "electronicPublicationDate": "2026-11-13",
+    "firstPublicationDate": "2026-11-13",
+    "firstIndexDate": "2026-11-19",
+    "hasEvaluations": "N"
+   },
+   {
+    "id": "PPR1359796",
+    "source": "PPR",
+    "doi": "10.64898/2026.11.03.26366374",
+    "title": "Stage\u2013Specific Roles of Plasma GFAP in Linking Amyloid Cascade in Alzheimer Disease",
+    "authorString": "Niu X, Sun Q, Wisch JK, Jiang M, Luna A, Hoagey DA, Schindler SE, Cruchaga C, Gordon BA, Wang Y, Benzinger TL, Alzheimer\u2019s Disease Neuroimaging Initiative (ADNI), Wang Q.",
+    "authorList": {
+     "author": [
+      {
+       "fullName": "Niu X",
+       "lastName": "Niu",
+       "firstName": "Xuan",
+       "initials": "X"
+      },
+      {
+       "fullName": "Sun Q",
+       "lastName": "Sun",
+       "firstName": "Qiuchang",
+       "initials": "Q"
+      },
+      {
+       "fullName": "Wisch JK",
+       "lastName": "Wisch",
+       "firstName": "Julie",
+       "initials": "JK"
+      },
+      {
+       "fullName": "Jiang M",
+       "lastName": "Jiang",
+       "firstName": "Meng",
+       "initials": "M"
+      }
+     ]
+    },
+    "dataLinksTagsList": {
+     "dataLinkstag": [
+      "altmetrics"
+     ]
+    },
+    "pubYear": "2026",
+    "abstractText": "<h4>INTRODUCTION</h4>  Astrocytic reactivity, measured by plasma glial fibrillary acidic protein (GFAP), is robustly elevated across the Alzheimer disease (AD) continuum, yet its relationship with the amyloid cascade remains poorly understood. <h4>METHODS</h4>  We integrated plasma GFAP with multimodal AD biomarkers including cerebrospinal fluid (CSF) or plasma A\u03b2 (A\u03b242/40), A\u03b2 and tau positron emission tomography (PET), structural MRI, and clinical severity, across a discovery cohort (Knight Alzheimer Disease Research Center, n=278) and an independent replication cohort (Alzheimer\u2019s Disease Neuroimaging Initiative, n=236). <h4>RESULTS</h4>  In both cohorts, plasma GFAP mediated the association of soluble A\u03b242/40 (CSF in the Knight ADRC; plasma in ADNI) with A\u03b2 PET, as well as the association of A\u03b2 PET with tau PET in the overall samples, which remained significant after false discovery rate (FDR) correction. Among tau-negative individuals, GFAP mediated the association between CSF A\u03b242/40 and A\u03b2 PET in Knight ADRC, but this effect did not survive FDR correction with plasma A\u03b242/40 in ADNI. In A\u03b2-positive individuals, GFAP mediated the association between A\u03b2 PET and tau PET burden in both cohorts, but survived correction only in ADNI. Interaction findings were partially replicated across cohorts. Exploratory plasma proteomics further revealed a GFAP-associated protein network enriched for extracellular matrix (ECM)-immune remodeling network. <h4>DISCUSSION</h4>  These findings reveal stage-specific associations of plasma GFAP with the amyloid cascade and implicate an astrocyte-centered ECM\u2013inflammatory axis, which may inform future diagnostic panels or targeted therapies. <h4>Clinical trial registration</h4>  Alzheimer\u2019s Disease Neuroimaging Initiative 3, ClinicalTrials.gov,  NCT02854033 .",
+    "pubTypeList": {
+     "pubType": [
+      "Preprint"
+     ]
+    },
+    "bookOrReportDetails": {
+     "publisher": "medRxiv",
+     "yearOfPublication": 2026
+    },
+    "isOpenAccess": "N",
+    "inEPMC": "N",
+    "inPMC": "N",
+    "citedByCount": 0,
+    "hasReferences": "N",
+    "hasTextMinedTerms": "Y",
+    "hasDbCrossReferences": "N",
+    "hasPDF": "N",
+    "hasBook": "N",
+    "hasSuppl": "N",
+    "hasLabsLinks": "Y",
+    "hasData": "N",
+    "authMan": "N",
+    "epmcAuthMan": "N",
+    "nihAuthMan": "N",
+    "hasTMAccessionNumbers": "N",
+    "dateOfCreation": "2026-11-06",
+    "firstPublicationDate": "2026-11-04",
+    "firstIndexDate": "2026-11-06",
+    "hasEvaluations": "N"
+   }
+  ]
+ }
+}

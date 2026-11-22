@@ -1,0 +1,107 @@
+{
+ "data": {
+  "disease": {
+   "id": "MONDO_0004975",
+   "name": "Alzheimer disease",
+   "associatedTargets": {
+    "count": 13006,
+    "rows": [
+     {
+      "score": 0.8743017509514485,
+      "target": {
+       "id": "ENSG00000142192",
+       "approvedSymbol": "APP",
+       "approvedName": "amyloid beta precursor protein"
+      },
+      "datatypeScores": [
+       {
+        "id": "clinical",
+        "score": 0.9775231241955992
+       },
+       {
+        "id": "genetic_literature",
+        "score": 0.607930797611621
+       },
+       {
+        "id": "affected_pathway",
+        "score": 0.607930797611621
+       },
+       {
+        "id": "literature",
+        "score": 0.9972599521523058
+       },
+       {
+        "id": "genetic_association",
+        "score": 0.927092402006943
+       },
+       {
+        "id": "animal_model",
+        "score": 0.47538638787264004
+       }
+      ]
+     },
+     {
+      "score": 0.8678833473880588,
+      "target": {
+       "id": "ENSG00000080815",
+       "approvedSymbol": "PSEN1",
+       "approvedName": "presenilin 1"
+      },
+      "datatypeScores": [
+       {
+        "id": "rna_expression",
+        "score": 0.04988096311450684
+       },
+       {
+        "id": "genetic_literature",
+        "score": 0.8880632854712809
+       },
+       {
+        "id": "clinical",
+        "score": 0.6426855212816258
+       },
+       {
+        "id": "literature",
+        "score": 0.9860459628256597
+       },
+       {
+        "id": "genetic_association",
+        "score": 0.954496377837
+       },
+       {
+        "id": "animal_model",
+        "score": 0.6968061402275691
+       }
+      ]
+     },
+     {
+      "score": 0.818963537542181,
+      "target": {
+       "id": "ENSG00000143801",
+       "approvedSymbol": "PSEN2",
+       "approvedName": "presenilin 2"
+      },
+      "datatypeScores": [
+       {
+        "id": "literature",
+        "score": 0.8866352900841123
+       },
+       {
+        "id": "genetic_association",
+        "score": 0.9105732536393558
+       },
+       {
+        "id": "clinical",
+        "score": 0.6426855212816258
+       },
+       {
+        "id": "genetic_literature",
+        "score": 0.7717343736347523
+       }
+      ]
+     }
+    ]
+   }
+  }
+ }
+}

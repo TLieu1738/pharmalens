@@ -1,0 +1,164 @@
+{
+ "molecules": [
+  {
+   "atc_classifications": [
+    "N06DX04"
+   ],
+   "availability_type": 1,
+   "biotherapeutic": {
+    "biocomponents": [
+     {
+      "component_id": 29444,
+      "component_type": "Protein",
+      "description": "Heavy chain",
+      "organism": null,
+      "sequence": "EVQLVESGGGLVQPGGSLRLSCSASGFTFSSFGMHWVRQAPGKGLEWVAYISSGSSTIYYGDTVKGRFTISRDNAKNSLFLQMSSLRAEDTAVYYCAREGGYYYGRSYYTMDYWGQGTTVTVSSASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKRVEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK",
+      "tax_id": null
+     },
+     {
+      "component_id": 29446,
+      "component_type": "Protein",
+      "description": "Light chain",
+      "organism": null,
+      "sequence": "DVVMTQSPLSLPVTPGAPASISCRSSQSIVHSNGNTYLEWYLQKPGQSPKLLIYKVSNRFSGVPDRFSGSGSGTDFTLRISRVEAEDVGIYYCFQGSHVPPTFGPGTKLEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC",
+      "tax_id": null
+     },
+     {
+      "component_id": 31245,
+      "component_type": null,
+      "description": "Glycosylation sites (N)",
+      "organism": null,
+      "sequence": "Asn-304 $ Asn-304''",
+      "tax_id": null
+     },
+     {
+      "component_id": 29519,
+      "component_type": null,
+      "description": "Glycosylation sites (N)",
+      "organism": null,
+      "sequence": "Asn-304 $ Asn-304''''",
+      "tax_id": null
+     },
+     {
+      "component_id": 31246,
+      "component_type": null,
+      "description": "Disulfide bridges",
+      "organism": null,
+      "sequence": "22-96 $ 22''-96'' $ 23'-93' $ 23'''-93''' $ 139'-199' $ 139'''-199''' $ 151-207 $ 151''-207'' $ 219'-227 $ 219'''-227'' $ 233-233'' $ 236-236'' $ 268-328 $ 268''-328'' $ 374-432 $ 374''-432''",
+      "tax_id": null
+     }
+    ],
+    "description": null,
+    "helm_notation": null,
+    "molecule_chembl_id": "CHEMBL3833321"
+   },
+   "black_box_warning": 1,
+   "chemical_probe": 0,
+   "chirality": 1,
+   "dosed_ingredient": true,
+   "first_approval": 2023,
+   "first_in_class": 0,
+   "inorganic_flag": 0,
+   "max_phase": "4.0",
+   "molecule_chembl_id": "CHEMBL3833321",
+   "molecule_hierarchy": {
+    "active_chembl_id": "CHEMBL3833321",
+    "molecule_chembl_id": "CHEMBL3833321",
+    "parent_chembl_id": "CHEMBL3833321"
+   },
+   "molecule_properties": null,
+   "molecule_synonyms": [
+    {
+     "molecule_synonym": "Ban 2401",
+     "syn_type": "OTHER",
+     "synonyms": "BAN 2401"
+    },
+    {
+     "molecule_synonym": "BAN-2401",
+     "syn_type": "RESEARCH_CODE",
+     "synonyms": "BAN-2401"
+    },
+    {
+     "molecule_synonym": "BAN2401",
+     "syn_type": "RESEARCH_CODE",
+     "synonyms": "BAN2401"
+    },
+    {
+     "molecule_synonym": "Lecanemab",
+     "syn_type": "ATC",
+     "synonyms": "LECANEMAB"
+    },
+    {
+     "molecule_synonym": "Lecanemab",
+     "syn_type": "FDA",
+     "synonyms": "LECANEMAB"
+    },
+    {
+     "molecule_synonym": "Lecanemab",
+     "syn_type": "INN",
+     "synonyms": "LECANEMAB"
+    },
+    {
+     "molecule_synonym": "Lecanemab",
+     "syn_type": "OTHER",
+     "synonyms": "LECANEMAB"
+    },
+    {
+     "molecule_synonym": "Lecanemab",
+     "syn_type": "USAN",
+     "synonyms": "LECANEMAB"
+    },
+    {
+     "molecule_synonym": "Lecanemab irmb",
+     "syn_type": "OTHER",
+     "synonyms": "LECANEMAB IRMB"
+    },
+    {
+     "molecule_synonym": "Lecanemab-irmb",
+     "syn_type": "FDA",
+     "synonyms": "LECANEMAB-IRMB"
+    },
+    {
+     "molecule_synonym": "Lecanemab-irmb",
+     "syn_type": "OTHER",
+     "synonyms": "LECANEMAB-IRMB"
+    },
+    {
+     "molecule_synonym": "Leqembi",
+     "syn_type": "OTHER",
+     "synonyms": "LEQEMBI"
+    },
+    {
+     "molecule_synonym": "Leqembi",
+     "syn_type": "TRADE_NAME",
+     "synonyms": "LEQEMBI"
+    }
+   ],
+   "molecule_type": "Antibody",
+   "natural_product": 0,
+   "oral": false,
+   "orphan": 0,
+   "parenteral": true,
+   "polymer_flag": 0,
+   "pref_name": "LECANEMAB",
+   "prodrug": 0,
+   "score": 40.0,
+   "structure_type": "SEQ",
+   "therapeutic_flag": true,
+   "topical": false,
+   "usan_stem": "-mab",
+   "usan_stem_definition": "monoclonal antibodies",
+   "usan_substem": "-mab",
+   "usan_year": null,
+   "veterinary": 0,
+   "withdrawn_flag": false
+  }
+ ],
+ "page_meta": {
+  "limit": 2,
+  "next": null,
+  "offset": 0,
+  "previous": null,
+  "total_count": 1
+ }
+}

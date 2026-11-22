@@ -1,0 +1,187 @@
+{
+ "studies": [
+  {
+   "protocolSection": {
+    "identificationModule": {
+     "nctId": "NCT05215782",
+     "orgStudyIdInfo": {
+      "id": "DOC100681"
+     },
+     "organization": {
+      "fullName": "Optina Diagnostics Inc.",
+      "class": "INDUSTRY"
+     },
+     "briefTitle": "Eye to Brain Connection",
+     "officialTitle": "Evaluation of Optina Retina Scans to Detect the Likeley Cerebral Amyloid Status (CAS) as Determined by Prospective PET Imaging"
+    },
+    "statusModule": {
+     "statusVerifiedDate": "2023-03",
+     "overallStatus": "COMPLETED",
+     "expandedAccessInfo": {
+      "hasExpandedAccess": false
+     },
+     "startDateStruct": {
+      "date": "2022-03-14",
+      "type": "ACTUAL"
+     },
+     "primaryCompletionDateStruct": {
+      "date": "2023-03-16",
+      "type": "ACTUAL"
+     },
+     "completionDateStruct": {
+      "date": "2023-03-16",
+      "type": "ACTUAL"
+     },
+     "studyFirstSubmitDate": "2022-01-18",
+     "studyFirstSubmitQcDate": "2022-01-18",
+     "studyFirstPostDateStruct": {
+      "date": "2022-01-31",
+      "type": "ACTUAL"
+     },
+     "lastUpdateSubmitDate": "2023-03-22",
+     "lastUpdatePostDateStruct": {
+      "date": "2023-03-24",
+      "type": "ACTUAL"
+     }
+    },
+    "sponsorCollaboratorsModule": {
+     "responsibleParty": {
+      "type": "SPONSOR"
+     },
+     "leadSponsor": {
+      "name": "Optina Diagnostics Inc.",
+      "class": "INDUSTRY"
+     },
+     "collaborators": [
+      {
+       "name": "Ezy Medical Research",
+       "class": "UNKNOWN"
+      }
+     ]
+    },
+    "oversightModule": {
+     "oversightHasDmc": false,
+     "isFdaRegulatedDrug": false,
+     "isFdaRegulatedDevice": false
+    },
+    "descriptionModule": {
+     "briefSummary": "This is a non-randomized, non-treatment, observational study designed to discover correlations between retinal imaging and amyloid PET imaging. Subjects will be recruited to the clinical cohort from referring physicians. Subjects may be participants from existing studies and clinical practices"
+    },
+    "conditionsModule": {
+     "conditions": [
+      "Alzheimer Disease"
+     ]
+    },
+    "designModule": {
+     "studyType": "OBSERVATIONAL",
+     "patientRegistry": false,
+     "designInfo": {
+      "observationalModel": "COHORT",
+      "timePerspective": "CROSS_SECTIONAL"
+     },
+     "enrollmentInfo": {
+      "count": 65,
+      "type": "ACTUAL"
+     }
+    },
+    "ipdSharingStatementModule": {
+     "ipdSharing": "NO"
+    }
+   },
+   "hasResults": false
+  },
+  {
+   "protocolSection": {
+    "identificationModule": {
+     "nctId": "NCT06325527",
+     "orgStudyIdInfo": {
+      "id": "YuGarden-01"
+     },
+     "organization": {
+      "fullName": "Ruijin Hospital",
+      "class": "OTHER"
+     },
+     "briefTitle": "Cognitive Impairment Cohort Study of the Elderly Population in YuGarden",
+     "officialTitle": "Shanghai Cognitive Impairment Study of the Elderly Population: YuGarden Cohort"
+    },
+    "statusModule": {
+     "statusVerifiedDate": "2024-02",
+     "overallStatus": "NOT_YET_RECRUITING",
+     "expandedAccessInfo": {
+      "hasExpandedAccess": false
+     },
+     "startDateStruct": {
+      "date": "2024-04-01",
+      "type": "ESTIMATED"
+     },
+     "primaryCompletionDateStruct": {
+      "date": "2031-04-01",
+      "type": "ESTIMATED"
+     },
+     "completionDateStruct": {
+      "date": "2031-06-01",
+      "type": "ESTIMATED"
+     },
+     "studyFirstSubmitDate": "2024-02-26",
+     "studyFirstSubmitQcDate": "2024-03-15",
+     "studyFirstPostDateStruct": {
+      "date": "2024-03-22",
+      "type": "ACTUAL"
+     },
+     "lastUpdateSubmitDate": "2024-03-15",
+     "lastUpdatePostDateStruct": {
+      "date": "2024-03-22",
+      "type": "ACTUAL"
+     }
+    },
+    "sponsorCollaboratorsModule": {
+     "responsibleParty": {
+      "type": "SPONSOR"
+     },
+     "leadSponsor": {
+      "name": "Ruijin Hospital",
+      "class": "OTHER"
+     }
+    },
+    "oversightModule": {
+     "isFdaRegulatedDrug": false,
+     "isFdaRegulatedDevice": false
+    },
+    "descriptionModule": {
+     "briefSummary": "The goal of this prospective observational research with an 8-year follow-up is to study the cognitive changes in the elderly in YuGarden community, Shanghai, China.\n\nThe main questions it aims to answer are:\n\n* incidence of cognitive impairment in community (converting to mild cognitive impairment or Alzheimer's disease)\n* to build a predictive model for the progression of cognitive impairment",
+     "detailedDescription": "This study is a prospective observational study which involves a large sample cohort of the elderly aged 60 to 85 years in YuGarden community, Shanghai, China, with an 8-year follow-up. Demographic information, peripheral organs evaluation (facial expression, hearing, OCT angiography), cognitive tests (MMSE, ADL), biospecimen (peripheral blood, urine, feces, gingival crevicular fluid), speech information, neuroimaging (MRI, PET) and electroencephalogram (EEG) will be collected and analyzed. Follow-up visits will be conducted twice a year for 4 visits and each visit includes cognitive tests, biospecimen collection, speech test, MRI and EEG. The primary outcome is the incidence of cognitive impairment indicating people who convert to mild cognitive impairment (MCI) or Alzheimer's disease (AD). Furthermore, a predictive model for the progression of cognitive impairment will be constructed."
+    },
+    "conditionsModule": {
+     "conditions": [
+      "Alzheimer Disease",
+      "Neurodegenerative Diseases",
+      "Cognitive Impairment",
+      "Mild Cognitive Impairment"
+     ],
+     "keywords": [
+      "Alzheimer Disease",
+      "Mild Cognitive Impairment",
+      "Cohort"
+     ]
+    },
+    "designModule": {
+     "studyType": "OBSERVATIONAL",
+     "patientRegistry": false,
+     "designInfo": {
+      "observationalModel": "COHORT",
+      "timePerspective": "PROSPECTIVE"
+     },
+     "bioSpec": {
+      "retention": "SAMPLES_WITH_DNA",
+      "description": "peripheral blood, urine, feces, gingival crevicular fluid"
+     },
+     "enrollmentInfo": {
+      "count": 1872,
+      "type": "ESTIMATED"
+     }
+    }
+   },
+   "hasResults": false
+  }
+ ]
+}

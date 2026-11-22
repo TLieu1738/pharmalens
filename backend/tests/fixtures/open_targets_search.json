@@ -1,0 +1,18 @@
+{
+ "data": {
+  "search": {
+   "hits": [
+    {
+     "id": "MONDO_0004975",
+     "name": "Alzheimer disease",
+     "entity": "disease"
+    },
+    {
+     "id": "MONDO_0100087",
+     "name": "familial Alzheimer disease",
+     "entity": "disease"
+    }
+   ]
+  }
+ }
+}

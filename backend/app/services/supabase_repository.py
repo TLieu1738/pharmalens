@@ -1,0 +1,301 @@
+"""Supabase (PostgreSQL via PostgREST) implementation of SessionRepository.
+
+Uses the service-role key, which bypasses RLS — so this module is server-side only, and every read path
+in the API enforces ownership before returning data (see `api/routes/sessions.py`).
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import UTC, datetime
+from typing import Any
+
+import httpx
+
+from app.config import Settings
+from app.models.agents import AgentExecution
+from app.models.evidence import EvidenceRecord
+from app.models.report import ResearchReport
+from app.models.research import ResearchPlan, SessionStatus, SessionSummary
+from app.models.session import SessionDetail
+from app.services.repository import ACTIVE_STATUSES, ordered_agents
+
+logger = logging.getLogger(__name__)
+
+EVIDENCE_BATCH = 200
+
+
+class SupabaseError(Exception):
+    pass
+
+
+class SupabaseSessionRepository:
+    durable = True
+
+    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None) -> None:
+        if not (settings.supabase_url and settings.supabase_service_role_key):
+            raise SupabaseError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required")
+        key = settings.supabase_service_role_key.get_secret_value()
+        self._client = client or httpx.AsyncClient(
+            base_url=f"{settings.supabase_url.rstrip('/')}/rest/v1",
+            headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            timeout=15,
+        )
+
+    async def _req(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        json: Any = None,
+        prefer: str | None = None,
+    ) -> Any:
+        headers = {"Prefer": prefer} if prefer else {}
+        resp = await self._client.request(method, path, params=params, json=json, headers=headers)
+        if resp.status_code >= 400:
+            # Log the PostgREST message server-side only.
+            logger.error(
+                "supabase_error method=%s path=%s status=%s body=%s",
+                method,
+                path,
+                resp.status_code,
+                resp.text[:500],
+            )
+            raise SupabaseError(f"database request failed ({resp.status_code})")
+        return resp.json() if resp.content else None
+
+    async def _update_session(self, session_id: str, fields: dict[str, Any]) -> None:
+        await self._req("PATCH", "/research_sessions", params={"id": f"eq.{session_id}"}, json=fields)
+
+    # -- writes -------------------------------------------------------------------------------------------
+    async def create_session(self, question: str, user_id: str | None, demo_mode: bool) -> str:
+        rows = await self._req(
+            "POST",
+            "/research_sessions",
+            prefer="return=representation",
+            json={
+                "research_question": question,
+                "user_id": user_id,
+                "demo_mode": demo_mode,
+                "status": "pending",
+            },
+        )
+        return rows[0]["id"]
+
+    async def set_status(self, session_id: str, status: SessionStatus) -> None:
+        await self._update_session(session_id, {"status": status.value})
+
+    async def save_plan(self, session_id: str, plan: ResearchPlan) -> None:
+        await self._update_session(session_id, {"research_plan": plan.model_dump(mode="json")})
+
+    async def upsert_agent(self, session_id: str, execution: AgentExecution) -> None:
+        await self._req(
+            "POST",
+            "/agent_executions",
+            params={"on_conflict": "session_id,agent_name"},
+            prefer="resolution=merge-duplicates",
+            json={
+                "session_id": session_id,
+                "agent_name": execution.agent_name.value,
+                "execution_status": execution.status.value,
+                "execution_duration_ms": execution.duration_ms,
+                "record_count": execution.record_count,
+                "message": execution.message,
+                "sources": [s.model_dump(mode="json") for s in execution.sources],
+                "error_message": execution.error_message,
+                "started_at": execution.started_at.isoformat() if execution.started_at else None,
+                "completed_at": execution.completed_at.isoformat() if execution.completed_at else None,
+            },
+        )
+
+    async def save_evidence(self, session_id: str, records: list[EvidenceRecord]) -> None:
+        rows = [_evidence_to_row(session_id, i, r) for i, r in enumerate(records)]
+        for start in range(0, len(rows), EVIDENCE_BATCH):
+            await self._req(
+                "POST",
+                "/evidence_records",
+                params={"on_conflict": "session_id,record_id"},
+                prefer="resolution=merge-duplicates",
+                json=rows[start : start + EVIDENCE_BATCH],
+            )
+
+    async def complete(
+        self, session_id: str, report: ResearchReport, profile: dict[str, Any], warnings: list[str]
+    ) -> None:
+        summary = next((s for s in report.sections if s.key == "executive_summary"), None)
+        await self._req(
+            "POST",
+            "/research_reports",
+            params={"on_conflict": "session_id"},
+            prefer="resolution=merge-duplicates",
+            json={
+                "session_id": session_id,
+                "executive_summary": " ".join(st.text for st in summary.statements) if summary else None,
+                "report_content": report.model_dump(mode="json"),
+            },
+        )
+        await self._update_session(
+            session_id,
+            {
+                "status": "completed",
+                "evidence_profile": profile,
+                "warnings": warnings,
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
+    async def fail(
+        self, session_id: str, error: str, profile: dict[str, Any] | None, warnings: list[str]
+    ) -> None:
+        await self._update_session(
+            session_id,
+            {
+                "status": "failed",
+                "error_message": error[:1000],
+                "evidence_profile": profile,
+                "warnings": warnings,
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
+    async def fail_interrupted(self) -> int:
+        active = ",".join(s.value for s in ACTIVE_STATUSES)
+        rows = await self._req(
+            "PATCH",
+            "/research_sessions",
+            params={"status": f"in.({active})"},
+            prefer="return=representation",
+            json={
+                "status": "failed",
+                "error_message": "Interrupted: the server restarted while this research was running.",
+                "completed_at": datetime.now(UTC).isoformat(),
+            },
+        )
+        return len(rows or [])
+
+    # -- reads --------------------------------------------------------------------------------------------
+    async def get_session(self, session_id: str) -> tuple[SessionDetail, str | None] | None:
+        rows = await self._req(
+            "GET",
+            "/research_sessions",
+            params={
+                "id": f"eq.{session_id}",
+                "select": "*,agent_executions(*),research_reports(report_content)",
+            },
+        )
+        if not rows:
+            return None
+        row = rows[0]
+        executions = {
+            e["agent_name"]: AgentExecution(
+                agent_name=e["agent_name"],
+                status=e["execution_status"],
+                started_at=e["started_at"],
+                completed_at=e["completed_at"],
+                duration_ms=e["execution_duration_ms"],
+                record_count=e["record_count"],
+                message=e["message"],
+                error_message=e["error_message"],
+                sources=e.get("sources") or [],
+            )
+            for e in row.get("agent_executions") or []
+        }
+        reports = row.get("research_reports")
+        if isinstance(reports, list):
+            reports = reports[0] if reports else None
+        detail = SessionDetail(
+            session_id=row["id"],
+            research_question=row["research_question"],
+            status=row["status"],
+            demo_mode=row["demo_mode"],
+            created_at=row["created_at"],
+            completed_at=row["completed_at"],
+            research_plan=row.get("research_plan"),
+            agents=ordered_agents(executions),
+            evidence_profile=row.get("evidence_profile"),
+            warnings=row.get("warnings") or [],
+            error_message=row.get("error_message"),
+            report=ResearchReport.model_validate(reports["report_content"]) if reports else None,
+        )
+        return detail, row.get("user_id")
+
+    async def get_evidence(self, session_id: str) -> list[EvidenceRecord]:
+        rows = await self._req(
+            "GET",
+            "/evidence_records",
+            params={"session_id": f"eq.{session_id}", "order": "position.asc", "select": "*"},
+        )
+        return [_row_to_evidence(r) for r in rows or []]
+
+    async def list_sessions(self, user_id: str, limit: int = 50) -> list[SessionSummary]:
+        rows = await self._req(
+            "GET",
+            "/research_sessions",
+            params={
+                "user_id": f"eq.{user_id}",
+                "order": "created_at.desc",
+                "limit": str(limit),
+                "select": "id,research_question,status,demo_mode,created_at,completed_at",
+            },
+        )
+        return [
+            SessionSummary(
+                session_id=r["id"],
+                research_question=r["research_question"],
+                status=r["status"],
+                demo_mode=r["demo_mode"],
+                created_at=r["created_at"],
+                completed_at=r["completed_at"],
+            )
+            for r in rows or []
+        ]
+
+
+def _evidence_to_row(session_id: str, position: int, r: EvidenceRecord) -> dict[str, Any]:
+    return {
+        "session_id": session_id,
+        "record_id": r.record_id,
+        "source_name": r.source_name.value,
+        "source_identifier": r.source_identifier,
+        "category": r.category.value,
+        "title": r.title,
+        "summary": r.summary,
+        "evidence_type": r.evidence_type.value,
+        "source_url": str(r.source_url),
+        "publication_date": r.publication_date,
+        "retrieved_at": r.retrieved_at.isoformat(),
+        "position": position,
+        "metadata": {
+            "source_metadata": r.metadata,
+            "identifiers": r.identifiers.model_dump(),
+            "authors": r.authors,
+            "journal": r.journal,
+            "publication_types": r.publication_types,
+            "quality_flags": [f.value for f in r.quality_flags],
+            "also_found_in": [s.value for s in r.also_found_in],
+        },
+    }
+
+
+def _row_to_evidence(row: dict[str, Any]) -> EvidenceRecord:
+    md = row.get("metadata") or {}
+    return EvidenceRecord(
+        record_id=row["record_id"],
+        source_name=row["source_name"],
+        source_identifier=row["source_identifier"],
+        category=row["category"],
+        evidence_type=row["evidence_type"],
+        title=row["title"],
+        summary=row["summary"],
+        source_url=row["source_url"],
+        publication_date=row["publication_date"],
+        retrieved_at=row["retrieved_at"],
+        identifiers=md.get("identifiers") or {},
+        authors=md.get("authors") or [],
+        journal=md.get("journal"),
+        publication_types=md.get("publication_types") or [],
+        metadata=md.get("source_metadata") or {},
+        quality_flags=md.get("quality_flags") or [],
+        also_found_in=md.get("also_found_in") or [],
+    )
