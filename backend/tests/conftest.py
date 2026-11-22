@@ -43,7 +43,7 @@ def client(settings: Settings) -> Iterator[TestClient]:
 
 @pytest.fixture
 def research_client() -> Iterator[TestClient]:
-    """App wired with a fake Claude, mocked sources, in-memory storage and fake auth."""
+    """App wired with a fake LLM, mocked sources, in-memory storage and fake auth."""
     settings = Settings(
         _env_file=None, environment="test", anon_sessions_per_hour=2, max_concurrent_research=5
     )

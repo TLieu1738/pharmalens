@@ -1,4 +1,4 @@
-"""Full LangGraph workflow with mocked sources and a mocked Claude."""
+"""Full LangGraph workflow with mocked sources and a mocked LLM."""
 
 from app.agents.synthesis import SynthesisOutput
 from app.graph.workflow import WorkflowDeps, run_research

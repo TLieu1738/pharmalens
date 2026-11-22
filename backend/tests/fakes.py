@@ -1,4 +1,4 @@
-"""Test doubles: a fake Claude and a router that serves recorded fixtures for every source."""
+"""Test doubles: a fake LLM and a router that serves recorded fixtures for every source."""
 
 from __future__ import annotations
 

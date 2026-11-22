@@ -1,4 +1,4 @@
-"""Research Synthesis agent: Claude writes a structured briefing over the validated evidence only.
+"""Research Synthesis agent: the LLM writes a structured briefing over the validated evidence only.
 
 After generation, every citation is checked against the retrieved record IDs. Invalid citations are removed,
 and any "finding" left without a valid citation is dropped. References are built deterministically.

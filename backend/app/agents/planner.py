@@ -1,4 +1,4 @@
-"""Research Planner agent: turns a natural-language question into a validated ResearchPlan (Claude)."""
+"""Research Planner agent: turns a natural-language question into a validated ResearchPlan (LLM)."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ summarises published evidence."""
 
 
 class PlannerOutput(BaseModel):
-    """Schema Claude fills in. Kept simple for structured outputs; clipped into ResearchPlan afterwards."""
+    """Schema the LLM fills in. Kept simple for structured outputs; clipped into ResearchPlan afterwards."""
 
     disease_area: str | None
     biological_targets: list[str]

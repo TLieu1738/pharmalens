@@ -7,7 +7,6 @@ from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 APP_VERSION = "0.1.0"
-DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5"
 
 
 class Settings(BaseSettings):
@@ -17,7 +16,8 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
 
     anthropic_api_key: SecretStr | None = None
-    anthropic_model: str = DEFAULT_ANTHROPIC_MODEL
+    # Model ID is configuration-only (ANTHROPIC_MODEL); there is deliberately no hardcoded default.
+    anthropic_model: str | None = None
 
     supabase_url: str | None = None
     supabase_anon_key: SecretStr | None = None
@@ -37,10 +37,9 @@ class Settings(BaseSettings):
 
     @field_validator("anthropic_model", mode="before")
     @classmethod
-    def _default_model_when_blank(cls, value: object) -> object:
-        # An empty ANTHROPIC_MODEL= line in .env should fall back to the default, not an empty string.
-        if value is None or (isinstance(value, str) and not value.strip()):
-            return DEFAULT_ANTHROPIC_MODEL
+    def _blank_model_is_none(cls, value: object) -> object:
+        if isinstance(value, str) and not value.strip():
+            return None
         return value
 
     @field_validator(
@@ -60,7 +59,7 @@ class Settings(BaseSettings):
 
     @property
     def anthropic_configured(self) -> bool:
-        return self.anthropic_api_key is not None
+        return self.anthropic_api_key is not None and self.anthropic_model is not None
 
     @property
     def supabase_configured(self) -> bool:

@@ -7,14 +7,14 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 | --- | --- |
 | Five live source integrations (PubMed, Europe PMC, ClinicalTrials.gov, ChEMBL, Open Targets) | `python -m scripts.smoke_sources` against the live APIs — all returned records |
 | Parsers, dedup, quality flags, retries/backoff | Unit tests on fixtures recorded from real API responses |
-| Full LangGraph workflow (planner → parallel retrieval → compounds → validation → synthesis) | Integration test with mocked sources + mocked Claude, incl. source outages, planner/synthesis failure, total outage |
+| Full LangGraph workflow (planner → parallel retrieval → compounds → validation → synthesis) | Integration test with mocked sources + mocked LLM, incl. source outages, planner/synthesis failure, total outage |
 | Citation grounding (fabricated IDs and uncited findings removed) | `tests/test_workflow.py` |
-| API: create, poll, evidence, ownership (404 for others), auth errors, anon rate limit, 503 without Claude key | `tests/test_api_research.py` |
+| API: create, poll, evidence, ownership (404 for others), auth errors, anon rate limit, 503 without LLM key | `tests/test_api_research.py` |
 | Supabase evidence row mapping round-trip | `tests/test_supabase_mapping.py` |
 | Backend lint/format | `ruff check .` and `ruff format` |
 | Frontend type-check, build, lint | `npm run build`, `npm run lint` |
 | Running servers: health, 503 without key, 422 validation, SPA deep links | curl against local uvicorn + vite |
-| **Live end-to-end run with real Claude (`claude-opus-5-5`)** on the demo Alzheimer's question | 2026-11-22 via the API: all 7 agents completed in ~60 s (synthesis ~45 s); 72 records from 5 sources (30 papers, 20 trials, 15 targets, 7 compounds); 44 report statements, 0 removed as unsupported, 0 invalid citations |
+| **Live end-to-end run with the real LLM** on the demo Alzheimer's question | 2026-11-22 via the API: all 7 agents completed in ~60 s (synthesis ~45 s); 72 records from 5 sources (30 papers, 20 trials, 15 targets, 7 compounds); 44 report statements, 0 removed as unsupported, 0 invalid citations |
 
 **Test suite:** 59 passed (`cd backend && .venv/bin/pytest`).
 

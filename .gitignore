@@ -30,6 +30,3 @@ logs/
 Thumbs.db
 .idea/
 
-# Local assistant instructions (not published)
-CLAUDE.md
-.claude/

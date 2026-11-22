@@ -1,8 +1,8 @@
 """Research report schema.
 
-`SynthesisOutput` is what Claude must return (validated via structured outputs). It is then checked
+`SynthesisOutput` is what the LLM must return (validated via structured outputs). It is then checked
 against the retrieved evidence and converted into `ResearchReport`, whose references are computed
-deterministically from the cited record IDs — Claude never writes reference entries or URLs.
+deterministically from the cited record IDs — the LLM never writes reference entries or URLs.
 """
 
 from datetime import datetime

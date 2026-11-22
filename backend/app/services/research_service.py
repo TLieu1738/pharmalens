@@ -13,7 +13,7 @@ import time
 from collections import defaultdict, deque
 from typing import Any
 
-from app.agents.llm import ClaudeLLM, LLMNotConfiguredError, StructuredLLM
+from app.agents.llm import AnthropicLLM, LLMNotConfiguredError, StructuredLLM
 from app.config import Settings
 from app.graph.workflow import WorkflowDeps, run_research
 from app.integrations.http import SourceHttpClient
@@ -76,7 +76,7 @@ class ResearchService:
     def _get_llm(self) -> StructuredLLM:
         if self._llm is None:
             try:
-                self._llm = ClaudeLLM(self._settings)
+                self._llm = AnthropicLLM(self._settings)
             except LLMNotConfiguredError as exc:
                 raise ServiceUnavailableError("The AI service is not configured on this server.") from exc
         return self._llm
@@ -111,7 +111,7 @@ class ResearchService:
         deps = WorkflowDeps(
             llm=llm,
             http=self._http,
-            model_name=getattr(llm, "model", self._settings.anthropic_model),
+            model_name=getattr(llm, "model", None) or self._settings.anthropic_model or "unspecified",
             reporter=RepositoryReporter(self._repo, session_id),
             ncbi_api_key=self._settings.ncbi_api_key.get_secret_value()
             if self._settings.ncbi_api_key

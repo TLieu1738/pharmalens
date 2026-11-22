@@ -1,7 +1,7 @@
 # PharmaLens
 
 Agentic AI research intelligence over **public** biomedical evidence. A user submits a research question; specialist
-Claude-powered agents plan the investigation, retrieve records from public scientific and regulatory sources
+LLM-powered agents plan the investigation, retrieve records from public scientific and regulatory sources
 (PubMed, Europe PMC, ClinicalTrials.gov, ChEMBL, Open Targets), validate and deduplicate the evidence, and synthesise a
 structured briefing in which every claim cites a retrieved record.
 
@@ -23,15 +23,15 @@ docs/       Architecture and API design notes
 
 ## How it works (short)
 
-1. **Research Planner** (Claude) turns the question into a validated search plan.
+1. **Research Planner** (LLM) turns the question into a validated search plan.
 2. **Literature**, **Clinical** and **Target** agents query PubMed + Europe PMC, ClinicalTrials.gov and Open Targets in
    parallel; the **Compound** agent then looks up planned compounds and trial interventions in ChEMBL.
 3. **Evidence Validation** deduplicates by DOI/PMID/PMCID/NCT/ChEMBL/Ensembl and flags preprints, retractions,
    stopped trials and missing metadata.
-4. **Research Synthesis** (Claude) writes a structured report; code then removes any citation that does not match a
+4. **Research Synthesis** (LLM) writes a structured report; code then removes any citation that does not match a
    retrieved record and any uncited "finding". References and URLs come from the records, never from the model.
 
-All retrieval is deterministic Python; Claude only plans and writes.
+All retrieval is deterministic Python; the LLM only plans and writes.
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ uvicorn app.main:app --reload --port 8000
 - Health: http://localhost:8000/api/health
 - OpenAPI docs (non-production only): http://localhost:8000/docs
 
-Tests and lint (no network or API keys needed — sources and Claude are mocked):
+Tests and lint (no network or API keys needed — sources and the LLM are mocked):
 
 ```bash
 cd backend && source .venv/bin/activate
@@ -86,7 +86,7 @@ npm run build && npm run lint
 | Variable | Where | Required | Notes |
 | --- | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | backend | yes (Phase 3+) | Server-side only. |
-| `ANTHROPIC_MODEL` | backend | no | Defaults to `claude-opus-5-5` (see `app/config.py`). |
+| `ANTHROPIC_MODEL` | backend | yes | Model ID from your Anthropic account. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | backend | yes (Phase 4+) | Service-role key is **never** sent to the browser. |
 | `SUPABASE_ANON_KEY` | backend | Phase 4+ | Used for token verification. |
 | `FRONTEND_URL` | backend | yes | Exact CORS origin; wildcards are rejected. |

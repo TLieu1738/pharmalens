@@ -27,6 +27,7 @@ def test_health_ok_when_configured_and_never_leaks_secrets() -> None:
         _env_file=None,
         environment="test",
         anthropic_api_key=secret,
+        anthropic_model="test-model",
         supabase_url="https://example.supabase.co",
         supabase_service_role_key="service-role-secret",
     )
@@ -39,9 +40,10 @@ def test_health_ok_when_configured_and_never_leaks_secrets() -> None:
     assert "service-role-secret" not in response.text
 
 
-def test_blank_model_env_falls_back_to_default() -> None:
-    s = Settings(_env_file=None, anthropic_model="  ")
-    assert s.anthropic_model.startswith("claude-")
+def test_blank_model_env_is_not_configured() -> None:
+    s = Settings(_env_file=None, anthropic_api_key="k", anthropic_model="  ")
+    assert s.anthropic_model is None
+    assert not s.anthropic_configured
 
 
 def test_cors_origins_never_include_wildcard() -> None:

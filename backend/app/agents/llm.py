@@ -1,7 +1,7 @@
 """Thin, typed wrapper around the Anthropic SDK used by the planner and synthesis agents.
 
 Agents depend on the :class:`StructuredLLM` protocol so tests can substitute a fake without network access.
-Claude is only ever asked to plan or to write prose over evidence we retrieved — never to fetch data.
+The LLM is only ever asked to plan or to write prose over evidence we retrieved — never to fetch data.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 
 class LLMError(Exception):
-    """Claude could not produce a usable structured response."""
+    """The LLM could not produce a usable structured response."""
 
 
 class LLMRefusalError(LLMError):
@@ -42,8 +42,8 @@ class StructuredLLM(Protocol):
     ) -> T: ...
 
 
-class ClaudeLLM:
-    """Structured-output calls to Claude via `messages.parse`, with server-side refusal fallback."""
+class AnthropicLLM:
+    """Structured-output calls to the Anthropic API via `messages.parse`, with server-side refusal fallback."""
 
     def __init__(self, settings: Settings, client: anthropic.AsyncAnthropic | None = None) -> None:
         if client is None:
@@ -52,6 +52,8 @@ class ClaudeLLM:
             client = anthropic.AsyncAnthropic(
                 api_key=settings.anthropic_api_key.get_secret_value(), max_retries=2, timeout=180.0
             )
+        if not settings.anthropic_model:
+            raise LLMNotConfiguredError("ANTHROPIC_MODEL is not set")
         self._client = client
         self._model = settings.anthropic_model
 
