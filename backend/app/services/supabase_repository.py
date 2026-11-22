@@ -29,6 +29,18 @@ class SupabaseError(Exception):
     pass
 
 
+def service_headers(key: str) -> dict[str, str]:
+    """Headers for server-side REST calls.
+
+    New-style secret keys (`sb_secret_...`) are not JWTs and go only in `apikey`; legacy service_role
+    JWTs are also sent as the bearer token.
+    """
+    headers = {"apikey": key, "Content-Type": "application/json"}
+    if not key.startswith("sb_"):
+        headers["Authorization"] = f"Bearer {key}"
+    return headers
+
+
 class SupabaseSessionRepository:
     durable = True
 
@@ -38,7 +50,7 @@ class SupabaseSessionRepository:
         key = settings.supabase_service_role_key.get_secret_value()
         self._client = client or httpx.AsyncClient(
             base_url=f"{settings.supabase_url.rstrip('/')}/rest/v1",
-            headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            headers=service_headers(key),
             timeout=15,
         )
 

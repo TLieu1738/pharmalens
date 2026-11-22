@@ -12,3 +12,12 @@ def test_evidence_row_round_trip_preserves_record() -> None:
     assert row["position"] == 3 and row["source_url"] == "https://pubmed.ncbi.nlm.nih.gov/39776249/"
     restored = _row_to_evidence(row)
     assert restored == record
+
+
+def test_service_headers_support_new_and_legacy_keys():
+    from app.services.supabase_repository import service_headers
+
+    new = service_headers("sb_secret_abc")
+    assert new["apikey"] == "sb_secret_abc" and "Authorization" not in new
+    legacy = service_headers("eyJhbGciOi.legacy.jwt")
+    assert legacy["Authorization"] == "Bearer eyJhbGciOi.legacy.jwt"
