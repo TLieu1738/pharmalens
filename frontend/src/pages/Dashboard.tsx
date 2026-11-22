@@ -4,14 +4,15 @@ import { AgentPipeline } from '@/components/dashboard/AgentPipeline'
 import { DataSources } from '@/components/dashboard/DataSources'
 import { ResearchQuestionForm } from '@/components/research/ResearchQuestionForm'
 import { SessionList } from '@/components/research/SessionList'
-import { loadRecentSessions, rememberSession } from '@/lib/recentSessions'
+import { useMySessions } from '@/hooks/useMySessions'
+import { rememberSession } from '@/lib/recentSessions'
 import { api, ApiError } from '@/services/api'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const recent = loadRecentSessions().slice(0, 5)
+  const recent = (useMySessions().items ?? []).slice(0, 5)
 
   const start = async (question: string) => {
     setSubmitting(true)
@@ -42,7 +43,7 @@ export default function Dashboard() {
       {recent.length > 0 && (
         <section>
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold text-ink-900">Recent research on this device</h2>
+            <h2 className="text-sm font-semibold text-ink-900">Your recent research</h2>
             <Link to="/saved" className="text-xs font-medium text-accent-700 hover:underline">
               View all
             </Link>

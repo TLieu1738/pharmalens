@@ -35,6 +35,12 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 - Trial search now includes the planner's named compounds (was class phrases only → 4 trials; now 20 of 80 matches).
 - Trial intervention names keep code names intact (`AV-1980R` was being cut to `AV-`) and arm labels like "lecanemab treatment group" are no longer looked up separately.
 
+## Sign-in flow (2026-11-22)
+- Full-page `/login` and `/signup` replace the old modal; every app page requires sign-in (`RequireAuth`), returning the user to the page they asked for.
+- Dashboard and Saved research list the signed-in account's sessions.
+- Local `.env` uses `DEMO_MODE=false`: the API returns 401 to signed-out research requests (verified with curl).
+- Not yet verified in a browser with a real account.
+
 ## Known limitations
 - Background execution is an in-process asyncio task: not durable across restarts (interrupted sessions are marked failed on startup).
 - Without Supabase, storage is in-memory (lost on restart).
