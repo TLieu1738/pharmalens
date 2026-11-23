@@ -1,4 +1,4 @@
-"""Literature agent: PubMed + Europe PMC for every protocol query, in parallel (deterministic retrieval)."""
+"""Literature agent: PubMed, Europe PMC and OpenAlex for every protocol query, in parallel (deterministic)."""
 
 import asyncio
 import math
@@ -6,6 +6,7 @@ import math
 from app.agents.base import RetrievalResult, run_search
 from app.integrations.europe_pmc import search_europe_pmc_paged
 from app.integrations.http import SourceHttpClient
+from app.integrations.openalex import search_openalex_paged
 from app.integrations.pubmed import search_pubmed_paged
 from app.models.evidence import SourceName
 from app.models.research import ResearchPlan
@@ -17,6 +18,7 @@ async def retrieve_literature(
     *,
     per_source: int | None = None,
     ncbi_api_key: str | None = None,
+    openalex_api_key: str | None = None,
 ) -> RetrievalResult:
     """Run each protocol query against each selected literature source.
 
@@ -59,6 +61,24 @@ async def retrieve_literature(
                         date_from=plan.date_from,
                         date_to=plan.date_to,
                         include_preprints=plan.include_preprints,
+                    ),
+                    query=query,
+                    requested=per_query,
+                )
+            )
+        if SourceName.OPENALEX in plan.sources:
+            jobs.append(
+                run_search(
+                    result,
+                    SourceName.OPENALEX.value,
+                    search_openalex_paged(
+                        http,
+                        query,
+                        max_results=per_query,
+                        date_from=plan.date_from,
+                        date_to=plan.date_to,
+                        include_preprints=plan.include_preprints,
+                        api_key=openalex_api_key,
                     ),
                     query=query,
                     requested=per_query,

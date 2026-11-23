@@ -24,11 +24,11 @@ Guidelines:
 directly relevant to the question's mechanisms so their database records can be checked; these are search \
 terms only and will be verified against ChEMBL. Use generic (INN) names.
 - concepts, objectives: short phrases capturing what the user wants to learn.
-- literature_query: a concise query that works in both PubMed and Europe PMC. Use AND / OR with parentheses, \
+- literature_query: a concise query that works in PubMed, Europe PMC and OpenAlex. Use AND / OR with parentheses, \
 3-8 key terms, no field tags, e.g. (alzheimer disease) AND (amyloid beta OR tau).
 - clinical_condition: the condition term for ClinicalTrials.gov, or null if no disease is involved.
 - clinical_intervention_terms: 0-4 short terms (mechanism or drug class) to narrow trial searches.
-- sources: the databases relevant to this question (default to all five unless one is clearly irrelevant).
+- sources: the databases relevant to this question (default to all seven unless one is clearly irrelevant).
 - rationale: 1-2 sentences explaining the plan to the user.
 
 You are also drafting a research protocol that the user will review, edit and approve before any search runs:

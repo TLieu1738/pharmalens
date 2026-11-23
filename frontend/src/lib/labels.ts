@@ -6,6 +6,8 @@ export const SOURCE_LABELS: Record<SourceName, string> = {
   clinicaltrials_gov: 'ClinicalTrials.gov',
   chembl: 'ChEMBL',
   open_targets: 'Open Targets',
+  pubchem: 'PubChem',
+  openalex: 'OpenAlex',
 }
 
 export const AGENT_LABELS: Record<AgentName, { name: string; detail: string }> = {

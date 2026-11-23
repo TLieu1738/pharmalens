@@ -1,7 +1,8 @@
-"""Compound agent: ChEMBL lookups for compounds named in the plan and found in retrieved trials.
+"""Compound agent: ChEMBL lookups for compounds named in the plan and found in retrieved trials, then PubChem.
 
 Runs after the Clinical agent so that investigational products from real trial registrations can be
-looked up, not only the names the planner suggested. Only exact name/synonym matches are kept.
+looked up, not only the names the planner suggested. Only exact name/synonym matches are kept. Matched small
+molecules are then looked up in PubChem by their ChEMBL InChIKey (exact structure match, never by name).
 """
 
 import re
@@ -10,6 +11,7 @@ from collections import Counter
 from app.agents.base import RetrievalResult, run_source
 from app.integrations.chembl import search_compounds
 from app.integrations.http import SourceHttpClient
+from app.integrations.pubchem import lookup_by_inchikey
 from app.models.evidence import EvidenceRecord, SourceName
 from app.models.research import ResearchPlan
 
@@ -72,4 +74,18 @@ async def retrieve_compounds(
     result.message = f"Looked up {len(queries)} compounds; {len(exact)} exact ChEMBL matches."
     if unmatched:
         result.warnings.append(f"No exact ChEMBL record found for: {', '.join(unmatched)}")
+    if SourceName.PUBCHEM in plan.sources and exact:
+        with_structure = [r for r in exact if r.metadata.get("inchi_key")]
+        if with_structure:
+            pubchem = await run_source(
+                result, SourceName.PUBCHEM.value, lookup_by_inchikey(http, with_structure)
+            )
+            result.records = exact + pubchem
+            result.message += (
+                f" PubChem: {len(pubchem)} of {len(with_structure)} small molecules matched by InChIKey"
+            )
+            biologics = len(exact) - len(with_structure)
+            result.message += (
+                f" ({biologics} without a structure key, e.g. antibodies)." if biologics else "."
+            )
     return result

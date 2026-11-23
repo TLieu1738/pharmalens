@@ -56,6 +56,7 @@ class WorkflowDeps:
     model_name: str
     reporter: ProgressReporter = NullReporter()  # type: ignore[assignment]
     ncbi_api_key: str | None = None
+    openalex_api_key: str | None = None
     # Checked before each agent starts; returning True stops the run (user cancelled the job).
     should_stop: Callable[[], Awaitable[bool]] | None = None
     # IDs of evidence persisted for this session; citations outside it are rejected (ownership check).
@@ -134,7 +135,12 @@ def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns (planning, exe
         return {"research_plan": plan}
 
     async def literature(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:
-        result = await retrieve_literature(deps.http, state["research_plan"], ncbi_api_key=deps.ncbi_api_key)
+        result = await retrieve_literature(
+            deps.http,
+            state["research_plan"],
+            ncbi_api_key=deps.ncbi_api_key,
+            openalex_api_key=deps.openalex_api_key,
+        )
         return {"literature_records": result.records, **_apply_retrieval(ex, result)}
 
     async def clinical(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:

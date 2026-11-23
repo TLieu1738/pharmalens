@@ -17,6 +17,7 @@ another user's sessions return 404.
 | POST | `/api/sessions/{id}/cancel` | owner | Cancel a session that has not finished. Running agents stop before their next step. |
 | POST | `/api/sessions/{id}/rerun` | owner | New session with the same question and protocol, opened in `awaiting_approval` for editing → `201`. |
 | GET | `/api/library` | required | Every evidence record across the caller's sessions, deduplicated by record ID, each with the sessions it came from. |
+| GET | `/api/graph?session_id=` | required | Knowledge graph built from the caller's evidence (all sessions, or one owned session; 404 otherwise): `{nodes, edges, stats}`. Every edge has `relation` and the `record_ids` that state it. |
 
 \* Signed-out research is allowed only when `DEMO_MODE=true` (local development).
 

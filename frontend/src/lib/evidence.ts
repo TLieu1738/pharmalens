@@ -28,7 +28,31 @@ export interface TrialInfo {
   startDate: string | null
   completionDate: string | null
   hasResults: boolean
+  resultsFirstPosted: string | null
   whyStopped: string | null
+  enrollmentType: string | null
+  studyType: string | null
+  allocation: string | null
+  masking: string | null
+  purpose: string | null
+  completionType: string | null
+  primaryOutcomes: OutcomeMeasure[]
+  secondaryOutcomes: OutcomeMeasure[]
+  secondaryOutcomeCount: number
+}
+
+/** A registered outcome *measure* (what the trial plans to measure), never an outcome result. */
+export interface OutcomeMeasure {
+  measure: string
+  timeFrame: string | null
+}
+
+function outcomes(value: unknown): OutcomeMeasure[] {
+  return Array.isArray(value)
+    ? (value as { measure?: unknown; time_frame?: unknown }[])
+        .map((o) => ({ measure: str(o?.measure) ?? '', timeFrame: str(o?.time_frame) }))
+        .filter((o) => o.measure)
+    : []
 }
 
 export function trialInfo(r: EvidenceRecord): TrialInfo {
@@ -50,7 +74,17 @@ export function trialInfo(r: EvidenceRecord): TrialInfo {
     startDate: str(m.start_date),
     completionDate: str(m.completion_date),
     hasResults: m.has_results === true,
+    resultsFirstPosted: str(m.results_first_posted),
     whyStopped: str(m.why_stopped),
+    enrollmentType: str(m.enrollment_type),
+    studyType: str(m.study_type),
+    allocation: str(m.allocation),
+    masking: str(m.masking),
+    purpose: str(m.primary_purpose),
+    completionType: str(m.completion_date_type),
+    primaryOutcomes: outcomes(m.primary_outcomes),
+    secondaryOutcomes: outcomes(m.secondary_outcomes),
+    secondaryOutcomeCount: typeof m.secondary_outcome_count === 'number' ? m.secondary_outcome_count : 0,
   }
 }
 
@@ -69,14 +103,29 @@ export interface CompoundInfo {
   withdrawn: boolean
   blackBoxWarning: boolean
   synonyms: string[]
-  mechanisms: { mechanism: string; actionType: string | null }[]
+  mechanisms: Mechanism[]
+  inchiKey: string | null
+}
+
+export interface Mechanism {
+  mechanism: string
+  actionType: string | null
+  targetName: string | null
+  targetSymbols: string[]
+  targetChemblId: string | null
 }
 
 export function compoundInfo(r: EvidenceRecord): CompoundInfo {
   const m = r.metadata
-  const mechanisms = Array.isArray(m.mechanisms)
-    ? (m.mechanisms as { mechanism_of_action?: unknown; action_type?: unknown }[])
-        .map((x) => ({ mechanism: str(x?.mechanism_of_action) ?? '', actionType: str(x?.action_type) }))
+  const mechanisms: Mechanism[] = Array.isArray(m.mechanisms)
+    ? (m.mechanisms as Record<string, unknown>[])
+        .map((x) => ({
+          mechanism: str(x?.mechanism_of_action) ?? '',
+          actionType: str(x?.action_type),
+          targetName: str(x?.target_name),
+          targetSymbols: strList(x?.target_gene_symbols),
+          targetChemblId: str(x?.target_chembl_id),
+        }))
         .filter((x) => x.mechanism)
     : []
   return {
@@ -90,7 +139,42 @@ export function compoundInfo(r: EvidenceRecord): CompoundInfo {
     blackBoxWarning: m.black_box_warning === true,
     synonyms: strList(m.synonyms),
     mechanisms,
+    inchiKey: str(m.inchi_key),
   }
+}
+
+export interface PubChemInfo {
+  cid: string
+  url: string
+  formula: string | null
+  weight: string | null
+  inchiKey: string | null
+  iupacName: string | null
+  smiles: string | null
+  chemblId: string | null
+}
+
+export function pubchemInfo(r: EvidenceRecord): PubChemInfo {
+  const m = r.metadata
+  return {
+    cid: r.source_identifier,
+    url: r.source_url,
+    formula: str(m.molecular_formula),
+    weight: str(m.molecular_weight),
+    inchiKey: str(m.inchi_key),
+    iupacName: str(m.iupac_name),
+    smiles: str(m.smiles),
+    chemblId: str(m.linked_chembl_id),
+  }
+}
+
+/** Normalise a name the same way the backend graph does ("Alzheimer's Disease" → "alzheimer disease"). */
+export function normaliseName(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/['’]s\b/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
 }
 
 export interface QualitySummary {

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { HealthResponse, RootResponse } from '@/types/api'
-import type { EvidenceRecord, LibraryRecord, ResearchPlan, SessionDetail, SessionStatus, SessionSummary } from '@/types/research'
+import type { EvidenceRecord, KnowledgeGraph, LibraryRecord, ResearchPlan, SessionDetail, SessionStatus, SessionSummary } from '@/types/research'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
@@ -56,6 +56,8 @@ export const api = {
   getEvidence: (id: string) => request<EvidenceRecord[]>(`/api/sessions/${encodeURIComponent(id)}/evidence`),
   listSessions: () => request<SessionSummary[]>('/api/sessions'),
   getLibrary: () => request<LibraryRecord[]>('/api/library'),
+  getGraph: (sessionId?: string) =>
+    request<KnowledgeGraph>(`/api/graph${sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : ''}`),
   saveProtocol: (id: string, protocol: ResearchPlan) =>
     request<ResearchPlan>(`/api/sessions/${encodeURIComponent(id)}/protocol`, { method: 'PUT', body: JSON.stringify(protocol) }),
   approveProtocol: (id: string, protocol: ResearchPlan) =>

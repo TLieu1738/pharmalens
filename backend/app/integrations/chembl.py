@@ -1,8 +1,9 @@
-"""ChEMBL web services: molecule search + mechanism of action.
+"""ChEMBL web services: molecule search, mechanism of action and mechanism targets.
 
 Docs: https://www.ebi.ac.uk/chembl/api/data/docs
-Only public descriptive data is captured (identifiers, development phase, mechanism). No structures or
-process information are exposed by PharmaLens.
+Only public descriptive data is captured: identifiers (including the standard InChIKey, used to find the same
+substance in PubChem), development phase, mechanism, and the gene symbols ChEMBL records for each mechanism
+target (used to connect compounds to Open Targets targets). No process or synthesis information is captured.
 """
 
 from __future__ import annotations
@@ -67,7 +68,53 @@ async def _search_one(http: SourceHttpClient, name: str, limit: int) -> list[Evi
         if isinstance(mech, BaseException):
             continue
         record.metadata["mechanisms"] = parse_mechanisms(mech)
+    await _annotate_targets(http, molecules)
     return molecules
+
+
+async def _annotate_targets(http: SourceHttpClient, molecules: list[EvidenceRecord]) -> None:
+    """Add ChEMBL's own target name and gene symbols to each mechanism (best-effort, one call per target)."""
+    target_ids = list(
+        dict.fromkeys(
+            m["target_chembl_id"]
+            for rec in molecules
+            for m in rec.metadata.get("mechanisms", [])
+            if m.get("target_chembl_id")
+        )
+    )
+    if not target_ids:
+        return
+    results = await asyncio.gather(
+        *(http.get_json(SOURCE, f"{BASE_URL}/target/{tid}.json") for tid in target_ids),
+        return_exceptions=True,
+    )
+    targets = {
+        tid: parse_target(data)
+        for tid, data in zip(target_ids, results, strict=True)
+        if not isinstance(data, BaseException)
+    }
+    for rec in molecules:
+        for mech in rec.metadata.get("mechanisms", []):
+            info = targets.get(mech.get("target_chembl_id") or "")
+            if info:
+                mech.update(info)
+
+
+def parse_target(data: Any) -> dict[str, Any]:
+    """Target name, type, organism and the gene symbols ChEMBL lists for its components."""
+    if not isinstance(data, dict) or not data.get("target_chembl_id"):
+        return {}
+    symbols: list[str] = []
+    for component in data.get("target_components") or []:
+        for syn in component.get("target_component_synonyms") or []:
+            if syn.get("syn_type") == "GENE_SYMBOL" and syn.get("component_synonym"):
+                symbols.append(syn["component_synonym"].strip())
+    return {
+        "target_name": data.get("pref_name"),
+        "target_type": data.get("target_type"),
+        "target_organism": data.get("organism"),
+        "target_gene_symbols": list(dict.fromkeys(symbols))[:10],
+    }
 
 
 def parse_molecules(data: Any, *, query: str) -> list[EvidenceRecord]:
@@ -118,6 +165,8 @@ def parse_molecules(data: Any, *, query: str) -> list[EvidenceRecord]:
                     "mechanisms": [],
                     "match_score": mol.get("score"),
                     "exact_name_match": exact_match,
+                    # Standard InChIKey for small molecules; None for biologics such as antibodies.
+                    "inchi_key": (mol.get("molecule_structures") or {}).get("standard_inchi_key"),
                 },
             )
         )

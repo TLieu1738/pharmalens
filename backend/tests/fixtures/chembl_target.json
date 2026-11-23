@@ -1,0 +1,22 @@
+{
+  "organism": "Homo sapiens",
+  "pref_name": "Amyloid-beta precursor protein",
+  "species_group_flag": false,
+  "target_chembl_id": "CHEMBL2487",
+  "target_components": [
+    {
+      "accession": "P05067",
+      "component_description": "Amyloid-beta precursor protein",
+      "component_id": 1219,
+      "component_type": "PROTEIN",
+      "relationship": "SINGLE PROTEIN",
+      "target_component_synonyms": [
+        {"component_synonym": "AD1", "syn_type": "GENE_SYMBOL_OTHER"},
+        {"component_synonym": "APP", "syn_type": "GENE_SYMBOL"},
+        {"component_synonym": "Amyloid-beta precursor protein", "syn_type": "UNIPROT"}
+      ]
+    }
+  ],
+  "target_type": "SINGLE PROTEIN",
+  "tax_id": 9606
+}

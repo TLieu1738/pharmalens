@@ -2,7 +2,7 @@
 
 _Last updated: 2026-11-23. Interview demo: Tuesday 2026-11-24._
 
-> **Branch `phase-1`** holds the Phase 1 upgrade (protocol approval, durable jobs, paged retrieval, audit trail, richer reports). `main` is the deployed version. See the Phase 1 section below; it needs migration `002` before it can run against Supabase.
+> **Branches.** `main` is deployed. `phase-1` adds protocol approval, durable jobs, paged retrieval, the audit trail and evidence integrity. `phase-2` (built on `phase-1`) adds the knowledge graph, trial comparison, drug pipeline, PubChem and OpenAlex. Both need migration `002` applied before they can run against Supabase; Phase 2 needs no further migration.
 
 ## Verified working
 | Area | How it was verified |
@@ -75,15 +75,32 @@ Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for 
 
 **Known limitations:** the support check is itself an LLM judgement (strictly instructed, separate call, auditable) and can err; number checks confirm a number appears in a cited source, not that it is used in the same sense; runs are now about 2.5 minutes, so lower the per-source limit for live demos if time matters.
 
+## Phase 2 (branch `phase-2`)
+
+| Feature | Verified by |
+| --- | --- |
+| OpenAlex parsing (abstract rebuilt from inverted index, DOI/PMID/PMCID, institutions, topics, preprint and retraction flags), filters, paging, API key never stored, refusal = source failure, merge with PubMed by DOI | `tests/test_phase2_sources.py` (fixtures recorded from the live API) |
+| PubChem by InChIKey only (biologics skipped, not-found skipped, outage fails, different structure ignored) | `tests/test_phase2_sources.py` |
+| ChEMBL mechanism targets with official gene symbols only | `tests/test_phase2_sources.py` |
+| Knowledge graph: exactly the source-stated edges, merges only on shared identifiers, every edge traceable, no invented nodes; endpoint private (401 / 404 / empty for other users) | `tests/test_knowledge_graph.py` |
+| CORS now allows `PUT` (protocol "Save draft" was blocked in browsers on `phase-1`) | Live preflight returned 200 with `PUT` |
+| Frontend: Knowledge Graph, Drug Pipeline, trial comparison/timeline/distributions, PubChem and target panels on Drug Intelligence | TypeScript, lint, production build; headless Chrome against the live local API with a temporary user (deleted): no console errors |
+
+**Test suite:** 122 passed on `phase-2`.
+
+**Live run (2026-11-23, real model and sources, in-memory storage, cap 10 per source):** protocol in 15 s with all seven sources selected; save draft and approve both 200; run completed in 185 s. OpenAlex returned 12 records, PubMed 12, ClinicalTrials.gov 10, Open Targets 10. **Europe PMC and ChEMBL were both returning HTTP 500/503 from EBI during this run**, so the run completed as partial (as designed) and no compounds, PubChem records or compound edges were produced. Graph: 41 entities, 37 edges, every edge traceable to a retrieved record; another user saw nothing (404 / empty). Claims: 20 supported, 19 partially supported, 7 hypotheses/gaps, 2 removed.
+
 ## New API
+- `GET /api/graph?session_id=` — knowledge graph over the user's evidence (all sessions, or one).
 - `GET /api/library`: the signed-in user's evidence across all sessions, deduplicated by record ID, each with the sessions it came from (`tests/test_api_research.py::test_library_merges_users_evidence_and_is_private`).
 
 ## Known limitations
-- Background execution is an in-process asyncio task: not durable across restarts (interrupted sessions are marked failed on startup).
+- On `main` (deployed), background execution is an in-process task and interrupted sessions are marked failed; `phase-1`/`phase-2` use the lease-based job queue instead.
 - Without Supabase, storage is in-memory (lost on restart).
-- Retrieval takes top-ranked results per source (≈15 papers/source, 20 trials, ≤8 compounds, 15 targets) — not a systematic review.
+- Retrieval takes the top-ranked results per source (protocol cap, default 20) — not a systematic review.
 - Contradiction detection relies on the synthesis agent reading abstracts; it is not a formal meta-analysis.
-- PubChem and OpenAlex not integrated (ChEMBL/PubMed/Europe PMC cover the needs) — future work.
+- OpenAlex without an API key shares a small daily budget per IP address; set `OPENALEX_API_KEY` (free) for reliable use.
+- Graph compound ↔ trial links need an exact name or synonym match; drugs registered under other names are not linked. Paper ↔ target links are not drawn.
 - Library aggregates up to 50 most recent sessions per request (one evidence query per session); fine at demo scale, would need a single SQL query for heavy users.
 - Anonymous rate limiting is per-process memory and per IP.
 

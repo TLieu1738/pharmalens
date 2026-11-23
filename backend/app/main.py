@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 
 from app.agents.llm import StructuredLLM
 from app.api.deps import Services
-from app.api.routes import health, library, research, sessions
+from app.api.routes import graph, health, library, research, sessions
 from app.config import APP_VERSION, Settings, get_settings
 from app.integrations.http import SourceHttpClient
 from app.logging_config import configure_logging
@@ -90,7 +90,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PUT", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
     )
 
@@ -113,6 +113,7 @@ def create_app(
     app.include_router(research.router)
     app.include_router(sessions.router)
     app.include_router(library.router)
+    app.include_router(graph.router)
     return app
 
 

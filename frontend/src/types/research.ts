@@ -24,7 +24,7 @@ export type AgentName =
 
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed' | 'skipped'
 
-export type SourceName = 'pubmed' | 'europe_pmc' | 'clinicaltrials_gov' | 'chembl' | 'open_targets'
+export type SourceName = 'pubmed' | 'europe_pmc' | 'clinicaltrials_gov' | 'chembl' | 'open_targets' | 'pubchem' | 'openalex'
 export type EvidenceCategory = 'literature' | 'clinical_trial' | 'compound' | 'target'
 export type EvidenceType =
   | 'primary_research'
@@ -218,6 +218,8 @@ export interface Identifiers {
   nct_id: string | null
   chembl_id: string | null
   ensembl_id: string | null
+  openalex_id?: string | null
+  pubchem_cid?: string | null
 }
 
 export interface EvidenceRecord {
@@ -254,4 +256,37 @@ export interface SessionRef {
 /** An evidence record across the user's sessions (deduplicated), with the sessions it was retrieved in. */
 export interface LibraryRecord extends EvidenceRecord {
   sessions: SessionRef[]
+}
+
+// Knowledge graph (GET /api/graph). Every edge carries the IDs of the records that state it.
+export type GraphNodeType = 'disease' | 'target' | 'compound' | 'trial' | 'publication' | 'sponsor'
+export type GraphRelation = 'associated_with' | 'acts_on' | 'tests' | 'studies' | 'sponsored_by' | 'references' | 'mentions'
+
+export interface GraphNode {
+  id: string
+  type: GraphNodeType
+  label: string
+  record_ids: string[]
+  url: string | null
+  data: Record<string, unknown>
+}
+
+export interface GraphEdge {
+  id: string
+  source: string
+  target: string
+  relation: GraphRelation
+  record_ids: string[]
+  detail: string | null
+}
+
+export interface KnowledgeGraph {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+  stats: {
+    records: number
+    nodes_by_type: Partial<Record<GraphNodeType, number>>
+    edges_by_relation: Partial<Record<GraphRelation, number>>
+    publications_without_links: number
+  }
 }

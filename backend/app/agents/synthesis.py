@@ -116,8 +116,19 @@ def _record_digest(record: EvidenceRecord) -> dict[str, Any]:
                 if md.get(k) not in (None, "")
             }
         )
-        digest["mechanisms"] = [m["mechanism_of_action"] for m in md.get("mechanisms", [])] or "not recorded"
-        digest.setdefault("first_approval", "not recorded")
+        if record.source_name.value == "pubchem":
+            digest.update(
+                {
+                    k: md.get(k)
+                    for k in ("molecular_formula", "molecular_weight", "linked_chembl_id")
+                    if md.get(k) not in (None, "")
+                }
+            )
+        else:
+            digest["mechanisms"] = [
+                m["mechanism_of_action"] for m in md.get("mechanisms", [])
+            ] or "not recorded"
+            digest.setdefault("first_approval", "not recorded")
     elif record.category.value == "target":
         digest.update(
             {

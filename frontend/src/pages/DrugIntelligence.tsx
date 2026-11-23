@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Panel } from '@/components/ui/Panel'
 import { Tabs } from '@/components/ui/Tabs'
 import { useLibrary } from '@/hooks/useLibrary'
-import { compoundInfo, mentions, trialInfo, year, type CompoundInfo } from '@/lib/evidence'
+import { compoundInfo, mentions, pubchemInfo, trialInfo, year, type CompoundInfo } from '@/lib/evidence'
 import { EVIDENCE_TYPE_LABELS, SOURCE_LABELS, formatDate } from '@/lib/labels'
 import type { LibraryRecord } from '@/types/research'
 
@@ -33,7 +33,7 @@ export default function DrugIntelligence() {
   const compounds = useMemo(
     () =>
       (records ?? [])
-        .filter((r) => r.category === 'compound')
+        .filter((r) => r.category === 'compound' && r.source_name === 'chembl')
         .map((r) => ({ record: r, info: compoundInfo(r) }))
         .sort((a, b) => (b.info.maxPhase ?? -1) - (a.info.maxPhase ?? -1) || a.info.name.localeCompare(b.info.name)),
     [records],
@@ -69,6 +69,7 @@ export default function DrugIntelligence() {
   if (!selected) return <Navigate to={`/drugs/${compounds[0].info.chemblId}`} replace />
 
   const { info, record } = selected
+  const pubchem = records.filter((r) => r.source_name === 'pubchem' && r.metadata.linked_chembl_id === info.chemblId).map(pubchemInfo)[0]
   const conditionCounts = [...linked.trials.flatMap((t) => trialInfo(t).conditions).reduce((m, c) => m.set(c, (m.get(c) ?? 0) + 1), new Map<string, number>())]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
@@ -152,6 +153,60 @@ export default function DrugIntelligence() {
                   </ul>
                 )}
                 <p className="mt-4 text-xs text-slate-500">Counts reflect only the top-ranked records retrieved in your sessions, not the full registry.</p>
+              </Panel>
+              <Panel title="Mechanism targets" subtitle="As recorded by ChEMBL for this compound's mechanism of action">
+                {info.mechanisms.length === 0 ? (
+                  <p className="text-sm text-slate-500">ChEMBL records no mechanism of action for this compound.</p>
+                ) : (
+                  <ul className="divide-y divide-slate-100">
+                    {info.mechanisms.map((m) => (
+                      <li key={`${m.mechanism}-${m.targetChemblId}`} className="py-2.5 text-sm">
+                        <p className="font-medium text-ink-900">{m.mechanism}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {[m.actionType, m.targetName, m.targetChemblId].filter(Boolean).join(' · ')}
+                        </p>
+                        {m.targetSymbols.length > 0 && (
+                          <p className="mt-1 flex flex-wrap gap-1.5">
+                            {m.targetSymbols.map((s) => (
+                              <Link key={s} to={`/graph?focus=${encodeURIComponent(`target:${s}`)}`} className="rounded bg-accent-50 px-2 py-0.5 font-mono text-xs text-accent-700 hover:bg-accent-100">
+                                {s}
+                              </Link>
+                            ))}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+              <Panel title="Chemical identifiers" subtitle="PubChem record matched to this ChEMBL compound by standard InChIKey">
+                {pubchem ? (
+                  <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <Fact label="PubChem CID">
+                      <a href={pubchem.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-700 hover:underline">
+                        {pubchem.cid} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    </Fact>
+                    <Fact label="Molecular formula">{pubchem.formula ?? '—'}</Fact>
+                    <Fact label="Molecular weight">{pubchem.weight ? `${pubchem.weight} g/mol` : '—'}</Fact>
+                    <Fact label="InChIKey">
+                      <span className="break-all font-mono text-xs">{pubchem.inchiKey ?? '—'}</span>
+                    </Fact>
+                    {pubchem.iupacName && (
+                      <div className="sm:col-span-2">
+                        <Fact label="IUPAC name">
+                          <span className="break-words text-xs font-normal">{pubchem.iupacName}</span>
+                        </Fact>
+                      </div>
+                    )}
+                  </dl>
+                ) : (
+                  <p className="text-sm text-slate-500">
+                    {info.inchiKey
+                      ? 'No PubChem record was retrieved for this structure in your sessions.'
+                      : 'ChEMBL records no small-molecule structure for this compound (for example, an antibody), so there is nothing to match in PubChem.'}
+                  </p>
+                )}
               </Panel>
               <Panel title="Other compounds in your library">
                 <ul className="divide-y divide-slate-100">

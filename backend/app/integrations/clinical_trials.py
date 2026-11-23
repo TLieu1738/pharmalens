@@ -119,7 +119,8 @@ def _outcomes(proto: dict[str, Any], key: str, limit: int = 5) -> list[dict[str,
 
 
 def _humanise(value: str | None) -> str | None:
-    return value.replace("_", " ").title() if value else None
+    # "NA" is the registry's "not applicable" (e.g. allocation in single-arm studies), not a value to display.
+    return value.replace("_", " ").title() if value and value != "NA" else None
 
 
 def _parse_study(study: dict[str, Any]) -> EvidenceRecord | None:
@@ -171,6 +172,7 @@ def _parse_study(study: dict[str, Any]) -> EvidenceRecord | None:
             # ACTUAL or ESTIMATED: an estimated enrolment is a target, not a participant count.
             "enrollment_type": _humanise((design.get("enrollmentInfo") or {}).get("type")),
             "primary_outcomes": _outcomes(proto, "primaryOutcomes"),
+            "secondary_outcomes": _outcomes(proto, "secondaryOutcomes", limit=10),
             "secondary_outcome_count": len(
                 (proto.get("outcomesModule") or {}).get("secondaryOutcomes") or []
             ),
@@ -181,6 +183,8 @@ def _parse_study(study: dict[str, Any]) -> EvidenceRecord | None:
             "completion_date": completion_struct.get("date"),
             "completion_date_type": _humanise(completion_struct.get("type")),
             "has_results": bool(study.get("hasResults")),
+            # Date results were first posted on the registry (results themselves are not retrieved).
+            "results_first_posted": (status.get("resultsFirstPostDateStruct") or {}).get("date"),
             "why_stopped": status.get("whyStopped"),
             "last_update": (status.get("lastUpdatePostDateStruct") or {}).get("date"),
         },

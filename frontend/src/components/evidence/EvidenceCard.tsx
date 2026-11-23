@@ -26,6 +26,16 @@ function TrialFacts({ md }: { md: Record<string, unknown> }) {
 }
 
 function CompoundFacts({ md }: { md: Record<string, unknown> }) {
+  if (md.linked_chembl_id) {
+    // PubChem record: chemical identifiers only (development status comes from ChEMBL)
+    const facts = [
+      ['Molecular formula', str(md.molecular_formula)],
+      ['Molecular weight (g/mol)', str(md.molecular_weight)],
+      ['InChIKey', str(md.inchi_key)],
+      ['Linked ChEMBL record', str(md.linked_chembl_id)],
+    ].filter(([, v]) => v) as [string, string][]
+    return <Facts facts={facts} />
+  }
   const mechs = Array.isArray(md.mechanisms)
     ? (md.mechanisms as { mechanism_of_action: string }[]).map((m) => m.mechanism_of_action).join('; ')
     : null

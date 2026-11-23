@@ -159,6 +159,12 @@ def source_router(*, fail_hosts: set[str] | None = None):
             return httpx.Response(200, json=fixture_json("chembl_molecule_search.json"))
         if host == "www.ebi.ac.uk" and path.endswith("/mechanism.json"):
             return httpx.Response(200, json=fixture_json("chembl_mechanism.json"))
+        if host == "www.ebi.ac.uk" and "/target/" in path:
+            return httpx.Response(200, json=fixture_json("chembl_target.json"))
+        if host == "api.openalex.org":
+            return httpx.Response(200, json=fixture_json("openalex_works.json"))
+        if host == "pubchem.ncbi.nlm.nih.gov":
+            return httpx.Response(200, json=fixture_json("pubchem_properties.json"))
         if host == "clinicaltrials.gov":
             return httpx.Response(200, json=fixture_json("clinical_trials_studies.json"))
         if host == "api.platform.opentargets.org":

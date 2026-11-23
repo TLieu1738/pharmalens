@@ -1,4 +1,4 @@
-import { Bookmark, FlaskConical, LayoutGrid, Library, ListChecks, Pill } from 'lucide-react'
+import { Bookmark, Columns3, FlaskConical, LayoutGrid, Library, ListChecks, Network, Pill } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useMySessions } from '@/hooks/useMySessions'
 import { formatDate } from '@/lib/labels'
@@ -11,7 +11,9 @@ const NAV = [
   { to: '/research', label: 'Research Workspace', icon: FlaskConical, end: false },
   { to: '/evidence', label: 'Evidence Library', icon: Library, end: false },
   { to: '/drugs', label: 'Drug Intelligence', icon: Pill, end: false },
+  { to: '/pipeline', label: 'Drug Pipeline', icon: Columns3, end: false },
   { to: '/trials', label: 'Clinical Trials', icon: ListChecks, end: false },
+  { to: '/graph', label: 'Knowledge Graph', icon: Network, end: false },
   { to: '/saved', label: 'Saved Research', icon: Bookmark, end: false },
 ]
 
@@ -49,7 +51,7 @@ function Sidebar() {
       </nav>
       <div className="mx-5 border-t border-slate-200 py-4 text-xs">
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Data coverage</p>
-        <p className="mt-2 text-slate-500">5 public sources, queried live</p>
+        <p className="mt-2 text-slate-500">7 public sources, queried live</p>
         <p className="mt-2 text-slate-500">Last research run</p>
         <p className="mt-0.5 font-medium text-ink-900">{last ? formatDate(last.created_at, true) : '—'}</p>
       </div>

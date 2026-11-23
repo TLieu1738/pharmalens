@@ -42,12 +42,12 @@ async def test_complete_workflow_produces_grounded_report() -> None:
     statuses = state["agent_statuses"]
     assert set(statuses) == {a.value for a in AgentName}
     assert all(s.status == ExecutionStatus.COMPLETED for s in statuses.values()), statuses
-    assert statuses[AgentName.LITERATURE.value].record_count == 5  # 2 PubMed + 3 Europe PMC
+    assert statuses[AgentName.LITERATURE.value].record_count == 8  # 2 PubMed + 3 Europe PMC + 3 OpenAlex
     assert statuses[AgentName.COMPOUNDS.value].record_count == 1  # lecanemab exact match
 
     evidence = state["validated_evidence"]
     sources = {r.source_name.value for r in evidence}
-    assert sources == {"pubmed", "europe_pmc", "clinicaltrials_gov", "chembl", "open_targets"}
+    assert sources == {"pubmed", "europe_pmc", "clinicaltrials_gov", "chembl", "open_targets", "openalex"}
 
     report = state["report"]
     assert report is not None
@@ -95,7 +95,7 @@ async def test_partial_status_when_one_literature_source_fails() -> None:
     async with mock_http(source_router(fail_hosts={"eutils.ncbi.nlm.nih.gov"}), max_retries=0) as http:
         state = await run_research(WorkflowDeps(llm=FakeLLM(), http=http, model_name="fake"), "s3", QUESTION)
     lit = state["agent_statuses"][AgentName.LITERATURE.value]
-    assert lit.status == ExecutionStatus.PARTIAL and lit.record_count == 3
+    assert lit.status == ExecutionStatus.PARTIAL and lit.record_count == 6  # Europe PMC + OpenAlex
 
 
 async def test_planner_failure_stops_workflow_cleanly() -> None:
@@ -119,7 +119,14 @@ async def test_synthesis_failure_recorded() -> None:
 
 
 async def test_all_sources_down_fails_at_validation() -> None:
-    hosts = {"eutils.ncbi.nlm.nih.gov", "www.ebi.ac.uk", "clinicaltrials.gov", "api.platform.opentargets.org"}
+    hosts = {
+        "eutils.ncbi.nlm.nih.gov",
+        "www.ebi.ac.uk",
+        "clinicaltrials.gov",
+        "api.platform.opentargets.org",
+        "api.openalex.org",
+        "pubchem.ncbi.nlm.nih.gov",
+    }
     async with mock_http(source_router(fail_hosts=hosts), max_retries=0) as http:
         state = await run_research(WorkflowDeps(llm=FakeLLM(), http=http, model_name="fake"), "s6", QUESTION)
     assert state["agent_statuses"][AgentName.VALIDATION.value].status == ExecutionStatus.FAILED

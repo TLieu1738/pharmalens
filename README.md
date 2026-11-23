@@ -2,8 +2,10 @@
 
 Agentic AI research intelligence over **public** biomedical evidence. A user submits a research question; specialist
 LLM-powered agents plan the investigation, retrieve records from public scientific and regulatory sources
-(PubMed, Europe PMC, ClinicalTrials.gov, ChEMBL, Open Targets), validate and deduplicate the evidence, and synthesise a
-structured briefing in which every claim cites a retrieved record.
+(PubMed, Europe PMC, OpenAlex, ClinicalTrials.gov, ChEMBL, PubChem, Open Targets), validate and deduplicate the
+evidence, and synthesise a structured briefing in which every claim cites a retrieved record. Workspace views add a
+knowledge graph (links drawn only where a source states them), a drug pipeline by development phase and
+side-by-side trial comparison.
 
 > PharmaLens is a research-support tool. Its outputs are informational, may be incomplete, and must be verified by
 > qualified researchers. It is not a medical device and does not give treatment or dosing advice.
@@ -26,9 +28,10 @@ docs/       API design notes (architecture: ARCHITECTURE.md, plans: ROADMAP.md)
 1. **Research Planner** (LLM) drafts a research protocol from the question: objective, key questions, search
    terms, literature queries, sources, inclusion/exclusion criteria, date range, record limits and known limitations.
 2. **You review and approve it.** Every field is editable; nothing is searched until you approve.
-3. **Literature**, **Clinical** and **Target** agents query PubMed + Europe PMC (every protocol query, paged),
-   ClinicalTrials.gov and Open Targets in parallel; the **Compound** agent then looks up planned compounds and
-   trial interventions in ChEMBL. Each query records how many records matched at the source versus were taken.
+3. **Literature**, **Clinical** and **Target** agents query PubMed + Europe PMC + OpenAlex (every protocol query,
+   paged), ClinicalTrials.gov and Open Targets in parallel; the **Compound** agent then looks up planned compounds and
+   trial interventions in ChEMBL (with mechanism target gene symbols) and matches small molecules to PubChem by
+   InChIKey. Each query records how many records matched at the source versus were taken.
 4. **Evidence Validation** deduplicates by DOI/PMID/PMCID/NCT/ChEMBL/Ensembl and flags preprints, retractions,
    stopped trials and missing metadata.
 5. **Research Synthesis** (LLM) writes the report against the approved protocol; code then removes any citation
@@ -68,7 +71,7 @@ pytest
 ruff check . && ruff format --check .
 ```
 
-Live smoke test of all five public sources (no keys needed):
+Live smoke test of the original five public sources (no keys needed):
 
 ```bash
 python -m scripts.smoke_sources "alzheimer amyloid tau"
@@ -96,6 +99,7 @@ npm run build && npm run lint
 | `SUPABASE_ANON_KEY` | backend | Phase 4+ | Used for token verification. |
 | `FRONTEND_URL` | backend | yes | Exact CORS origin; wildcards are rejected. |
 | `NCBI_API_KEY` | backend | no | Raises PubMed rate limit; works without it. |
+| `OPENALEX_API_KEY` | backend | recommended | Free key from openalex.org/settings/api. Without it OpenAlex requests share a small daily budget per IP and may be refused (reported as a source failure). |
 | `DEMO_MODE` | backend | no | `true` lets signed-out users run research (unlisted sessions, rate limited per IP). |
 | `ADDITIONAL_CORS_ORIGINS` | backend | no | Comma-separated extra origins (e.g. Vercel preview URL). |
 | `RUN_WORKER_IN_API` | backend | no | Default `true`: the API process runs research jobs. Set `false` when running `python -m app.worker` separately. |

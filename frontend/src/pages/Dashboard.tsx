@@ -20,6 +20,8 @@ const SOURCES: { id: SourceName; detail: string }[] = [
   { id: 'clinicaltrials_gov', detail: 'Registered studies' },
   { id: 'chembl', detail: 'Compounds & mechanisms' },
   { id: 'open_targets', detail: 'Disease–target associations' },
+  { id: 'openalex', detail: 'Citations, institutions and topics' },
+  { id: 'pubchem', detail: 'Chemical identifiers by InChIKey' },
 ]
 
 /** Executive-summary highlights from the user's most recent completed sessions. */
@@ -85,7 +87,7 @@ export default function Dashboard() {
         <StatCard label="Research sessions" value={sessions ? sessions.length : '—'} />
         <StatCard label="Publications analysed" value={count((c) => c === 'literature')} />
         <StatCard label="Clinical trials identified" value={count((c) => c === 'clinical_trial')} />
-        <StatCard label="Compounds indexed" value={count((c) => c === 'compound')} />
+        <StatCard label="Compounds indexed" value={records ? records.filter((r) => r.source_name === 'chembl').length : '—'} />
       </StatGrid>
 
       <Panel

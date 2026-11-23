@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -12,6 +13,10 @@ import PrintReport from '@/pages/PrintReport'
 import ResearchSession, { LatestResearch } from '@/pages/ResearchSession'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import SavedResearch from '@/pages/SavedResearch'
+import DrugPipeline from '@/pages/DrugPipeline'
+
+// Loaded on demand: the graph library is large and only this page needs it.
+const KnowledgeGraph = lazy(() => import('@/pages/KnowledgeGraph'))
 
 export default function App() {
   return (
@@ -30,6 +35,15 @@ export default function App() {
           <Route path="trials" element={<ClinicalTrials />} />
           <Route path="drugs" element={<DrugIntelligence />} />
           <Route path="drugs/:chemblId" element={<DrugIntelligence />} />
+          <Route path="pipeline" element={<DrugPipeline />} />
+          <Route
+            path="graph"
+            element={
+              <Suspense fallback={<p className="text-sm text-slate-500">Loading graph…</p>}>
+                <KnowledgeGraph />
+              </Suspense>
+            }
+          />
           <Route path="saved" element={<SavedResearch />} />
           <Route path="*" element={<NotFound />} />
         </Route>

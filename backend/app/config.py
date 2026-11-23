@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     additional_cors_origins: str = ""
 
     ncbi_api_key: SecretStr | None = None
+    # Optional free key from openalex.org/settings/api; without one OpenAlex shares a small daily budget per IP.
+    openalex_api_key: SecretStr | None = None
     # Allow signed-out users to run research (sessions are unlisted, reachable only by their UUID).
     demo_mode: bool = True
     anon_sessions_per_hour: int = Field(default=6, ge=0)
@@ -50,7 +52,12 @@ class Settings(BaseSettings):
         return value
 
     @field_validator(
-        "anthropic_api_key", "supabase_anon_key", "supabase_service_role_key", "ncbi_api_key", mode="before"
+        "anthropic_api_key",
+        "supabase_anon_key",
+        "supabase_service_role_key",
+        "ncbi_api_key",
+        "openalex_api_key",
+        mode="before",
     )
     @classmethod
     def _blank_secret_is_none(cls, value: object) -> object:

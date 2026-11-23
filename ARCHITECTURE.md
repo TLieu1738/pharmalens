@@ -1,7 +1,7 @@
 # PharmaLens architecture
 
 PharmaLens turns a biomedical research question into a cited evidence briefing. The user approves a research
-protocol, deterministic agents retrieve records from five public databases, a rule-based step validates them,
+protocol, deterministic agents retrieve records from seven public databases, a rule-based step validates them,
 and an LLM writes a report whose every finding is checked in code against the retrieved records.
 
 ## System overview
@@ -17,8 +17,8 @@ Job runner (inside the API process, or `python -m app.worker`)
    │  claims a due session with a lease, renews it while working, re-queues it if the lease lapses
    ▼
 LangGraph — planning graph:   planner (LLM) → protocol saved → status awaiting_approval
-            execution graph:  ┬─> literature (PubMed + Europe PMC, every protocol query) ─┐
-                              ├─> clinical (ClinicalTrials.gov) ──> compounds (ChEMBL) ────┼─> validation → synthesis (LLM)
+            execution graph:  ┬─> literature (PubMed + Europe PMC + OpenAlex, every query) ┐
+                              ├─> clinical (ClinicalTrials.gov) ──> compounds (ChEMBL → PubChem) ┼─> validation → synthesis (LLM)
                               └─> targets (Open Targets) ──────────────────────────────────┘    (rules)
                                                                        → claim verification (rules + LLM support check) → publish
    │  every agent writes its status, timings and per-query coverage as it runs
@@ -46,10 +46,10 @@ A job re-queued after an interruption returns to `pending` or `queued` with `att
 | Agent | Kind | Input → output |
 | --- | --- | --- |
 | Research Planner | LLM (structured output, effort `low`) | question → protocol: objective, key questions, disease, targets, HGNC symbols, compounds, drug classes, literature queries, trial condition, sources, inclusion/exclusion criteria, optional date range, intended outputs, known limitations |
-| Literature | Deterministic | each protocol query × PubMed and Europe PMC, paged, with date and preprint filters |
+| Literature | Deterministic | each protocol query × PubMed, Europe PMC and OpenAlex, paged, with date and preprint filters (OpenAlex adds citation counts, institutions, topics) |
 | Clinical Intelligence | Deterministic | ClinicalTrials.gov v2 studies (status, phase, design, interventions, results posted, reason stopped), paged, optional start-date filter |
 | Biological Target | Deterministic | Open Targets disease→target associations (rank, datatype scores) |
-| Compound | Deterministic | protocol compounds **plus** drug interventions from retrieved trials → ChEMBL (exact name/synonym matches only) + mechanisms |
+| Compound | Deterministic | protocol compounds **plus** drug interventions from retrieved trials → ChEMBL (exact name/synonym matches only) + mechanisms + mechanism target gene symbols → PubChem by standard InChIKey (small molecules only) |
 | Evidence Validation | Deterministic | union-find deduplication across DOI/PMID/PMCID/NCT/ChEMBL/Ensembl IDs, quality flags, evidence profile |
 | Research Synthesis | LLM (structured output, effort `medium`) | validated evidence + approved protocol → *draft* claims (typed, with citations and limitations). Never published directly. |
 | Claim Verification | Deterministic rules + separate LLM support check (effort `low`) | draft → publishable report: removes fabricated/foreign citations, unsupported or contradicted factual claims, relabels unsupported interpretations as hypotheses, builds references from real records |
@@ -136,6 +136,27 @@ recorded"; registered primary outcome *measures* are captured as measures, not r
 Other controls: statements are labelled by type in the UI; validation flags preprints, retractions, stopped
 trials, trials without posted results, missing metadata and withdrawn compounds; empty report sections are
 omitted rather than filled; prompts tell models never to follow instructions found inside evidence.
+
+## Knowledge graph
+
+`services/knowledge_graph.py` builds the graph deterministically from evidence records (`GET /api/graph`, all of the
+user's sessions or one). No LLM, similarity or embedding is involved; an edge exists only because a record states it,
+and it carries that record's ID.
+
+| Edge | Stated by |
+| --- | --- |
+| target → disease `associated_with` | Open Targets association record (score in the edge detail) |
+| compound → target `acts_on` | ChEMBL mechanism; the target's official gene symbol comes from ChEMBL's target record |
+| trial → compound `tests` | Trial intervention name (dose stripped) equals the ChEMBL compound name or a synonym |
+| trial → disease `studies`, trial → sponsor `sponsored_by` | Trial registration |
+| publication → trial `references` | The trial's NCT number appears in the paper's title or abstract (only retrieved trials) |
+| publication → compound `mentions` | The compound's name or a synonym (≥ 5 characters) appears as a whole word in the title or abstract |
+
+Nodes from different sources merge only on what both state: HGNC symbol for targets (Open Targets ↔ ChEMBL),
+normalised disease/condition name, and the PubChem record attaches to the ChEMBL compound it was matched to by
+InChIKey. Publications with no qualifying link are left out (counted in `stats`). The UI renders it with Cytoscape.js
+(loaded only on that page), with a neighbourhood view that expands one node at a time and a "why?" link on every
+edge that shows the records behind it.
 
 ## Report structure
 

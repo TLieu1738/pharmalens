@@ -17,6 +17,8 @@ _SOURCE_PRIORITY = {
     SourceName.CLINICAL_TRIALS: 0,
     SourceName.CHEMBL: 0,
     SourceName.OPEN_TARGETS: 0,
+    SourceName.PUBCHEM: 0,
+    SourceName.OPENALEX: 2,
 }
 
 
@@ -78,7 +80,16 @@ def _merge(group: list[EvidenceRecord]) -> EvidenceRecord:
             primary.authors = other.authors
         if not primary.journal and other.journal:
             primary.journal = other.journal
-        for field in ("doi", "pmid", "pmcid", "nct_id", "chembl_id", "ensembl_id"):
+        for field in (
+            "doi",
+            "pmid",
+            "pmcid",
+            "nct_id",
+            "chembl_id",
+            "ensembl_id",
+            "openalex_id",
+            "pubchem_cid",
+        ):
             if not getattr(primary.identifiers, field) and getattr(other.identifiers, field):
                 setattr(primary.identifiers, field, getattr(other.identifiers, field))
         # Only replace an UNKNOWN type with a known one; known types reported by the canonical source stand.
@@ -89,6 +100,10 @@ def _merge(group: list[EvidenceRecord]) -> EvidenceRecord:
             primary.metadata["is_open_access"] = True
         if other.metadata.get("cited_by_count") is not None:
             primary.metadata.setdefault("cited_by_count", other.metadata["cited_by_count"])
+        # OpenAlex context (topics, author institutions) is kept alongside the canonical record.
+        for key in ("topics", "institutions"):
+            if other.metadata.get(key) and not primary.metadata.get(key):
+                primary.metadata[key] = other.metadata[key]
     primary.metadata["merged_record_ids"] = [r.record_id for r in group]
     return primary
 

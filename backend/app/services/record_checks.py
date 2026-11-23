@@ -18,6 +18,8 @@ IDENTIFIER_PATTERNS: dict[SourceName, re.Pattern[str]] = {
     SourceName.CLINICAL_TRIALS: re.compile(r"^NCT\d{8}$"),
     SourceName.CHEMBL: re.compile(r"^CHEMBL\d{1,9}$"),
     SourceName.OPEN_TARGETS: re.compile(r"^[A-Za-z]+_\d+:ENSG\d{11}$"),
+    SourceName.PUBCHEM: re.compile(r"^\d{1,10}$"),
+    SourceName.OPENALEX: re.compile(r"^W\d{1,12}$"),
 }
 
 # Each source's records must link back to that source's own domain.
@@ -27,6 +29,8 @@ SOURCE_HOSTS: dict[SourceName, str] = {
     SourceName.CLINICAL_TRIALS: "clinicaltrials.gov",
     SourceName.CHEMBL: "www.ebi.ac.uk",
     SourceName.OPEN_TARGETS: "platform.opentargets.org",
+    SourceName.PUBCHEM: "pubchem.ncbi.nlm.nih.gov",
+    SourceName.OPENALEX: "openalex.org",
 }
 
 PROVENANCE_HOSTS: dict[SourceName, str] = {
@@ -35,6 +39,8 @@ PROVENANCE_HOSTS: dict[SourceName, str] = {
     SourceName.CLINICAL_TRIALS: "clinicaltrials.gov",
     SourceName.CHEMBL: "www.ebi.ac.uk",
     SourceName.OPEN_TARGETS: "api.platform.opentargets.org",
+    SourceName.PUBCHEM: "pubchem.ncbi.nlm.nih.gov",
+    SourceName.OPENALEX: "api.openalex.org",
 }
 
 

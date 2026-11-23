@@ -240,6 +240,9 @@ class JobRunner:
             ncbi_api_key=self._settings.ncbi_api_key.get_secret_value()
             if self._settings.ncbi_api_key
             else None,
+            openalex_api_key=self._settings.openalex_api_key.get_secret_value()
+            if self._settings.openalex_api_key
+            else None,
             should_stop=should_stop,
         )
 

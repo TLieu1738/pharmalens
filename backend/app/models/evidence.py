@@ -13,6 +13,8 @@ class SourceName(StrEnum):
     CLINICAL_TRIALS = "clinicaltrials_gov"
     CHEMBL = "chembl"
     OPEN_TARGETS = "open_targets"
+    PUBCHEM = "pubchem"
+    OPENALEX = "openalex"
 
 
 SOURCE_LABELS: dict[SourceName, str] = {
@@ -21,6 +23,8 @@ SOURCE_LABELS: dict[SourceName, str] = {
     SourceName.CLINICAL_TRIALS: "ClinicalTrials.gov",
     SourceName.CHEMBL: "ChEMBL",
     SourceName.OPEN_TARGETS: "Open Targets",
+    SourceName.PUBCHEM: "PubChem",
+    SourceName.OPENALEX: "OpenAlex",
 }
 
 
@@ -65,6 +69,8 @@ class Identifiers(BaseModel):
     nct_id: str | None = None
     chembl_id: str | None = None
     ensembl_id: str | None = None
+    openalex_id: str | None = None
+    pubchem_cid: str | None = None
 
     def keys(self) -> list[str]:
         """Namespaced identifier keys, normalised for matching (e.g. 'doi:10.1/abc')."""

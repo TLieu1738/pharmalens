@@ -17,4 +17,4 @@ def test_invalid_questions_rejected(question: str) -> None:
 
 def test_plan_defaults_to_all_sources() -> None:
     plan = ResearchPlan(literature_query="alzheimer tau")
-    assert len(plan.sources) == 5
+    assert len(plan.sources) == 7
