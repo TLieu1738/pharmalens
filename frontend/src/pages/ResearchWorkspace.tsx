@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 import { AgentProgress } from '@/components/research/AgentProgress'
 import { PlanSummary } from '@/components/research/PlanSummary'
 import { Panel } from '@/components/ui/Panel'
@@ -13,11 +13,8 @@ export default function ResearchWorkspace({ session }: { session: SessionDetail 
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
       <Panel
         title="Agent workflow"
-        actions={
-          <span className="font-mono text-xs text-slate-500">
-            {failed ? 'stopped' : `${STATUS_LABELS[session.status]} · ${done}/${session.agents.length} agents finished`}
-          </span>
-        }
+        subtitle={failed ? 'Stopped' : `${STATUS_LABELS[session.status]} · ${done} of ${session.agents.length} agents finished`}
+        actions={!failed && <Loader2 className="h-4 w-4 animate-spin text-accent-600" aria-label="Running" />}
       >
         {failed && (
           <div className="mb-4 flex gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm text-rose-800">

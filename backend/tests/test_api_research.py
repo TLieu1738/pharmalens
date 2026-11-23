@@ -90,3 +90,25 @@ def test_anonymous_rate_limit(research_client: TestClient) -> None:
         "/api/research", json={"research_question": QUESTION}, headers={"Authorization": "Bearer token-carol"}
     )
     assert ok.status_code == 202
+
+
+def test_library_merges_users_evidence_and_is_private(research_client: TestClient) -> None:
+    alice = {"Authorization": "Bearer token-alice"}
+    bob = {"Authorization": "Bearer token-bob"}
+    sids = []
+    for _ in range(2):
+        sid = research_client.post(
+            "/api/research", json={"research_question": QUESTION}, headers=alice
+        ).json()["session_id"]
+        wait_for_terminal(research_client, sid, alice)
+        sids.append(sid)
+
+    library = research_client.get("/api/library", headers=alice).json()
+    per_session = research_client.get(f"/api/sessions/{sids[0]}/evidence", headers=alice).json()
+    # Same mocked sources twice: records are deduplicated, each linked to both sessions.
+    assert len(library) == len(per_session) > 0
+    assert len({r["record_id"] for r in library}) == len(library)
+    assert all({s["session_id"] for s in r["sessions"]} == set(sids) for r in library)
+
+    assert research_client.get("/api/library", headers=bob).json() == []
+    assert research_client.get("/api/library").status_code == 401

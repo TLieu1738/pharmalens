@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { HealthResponse, RootResponse } from '@/types/api'
-import type { EvidenceRecord, SessionDetail, SessionStatus, SessionSummary } from '@/types/research'
+import type { EvidenceRecord, LibraryRecord, SessionDetail, SessionStatus, SessionSummary } from '@/types/research'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000').replace(/\/$/, '')
 
@@ -55,4 +55,5 @@ export const api = {
   getSession: (id: string) => request<SessionDetail>(`/api/sessions/${encodeURIComponent(id)}`),
   getEvidence: (id: string) => request<EvidenceRecord[]>(`/api/sessions/${encodeURIComponent(id)}/evidence`),
   listSessions: () => request<SessionSummary[]>('/api/sessions'),
+  getLibrary: () => request<LibraryRecord[]>('/api/library'),
 }

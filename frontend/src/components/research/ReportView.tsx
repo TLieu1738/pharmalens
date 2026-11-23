@@ -49,8 +49,8 @@ export function ReportView({ report, numbers }: { report: ResearchReport; number
   return (
     <div className="space-y-6">
       {summary && (
-        <section className="rounded-lg border border-ink-700/15 bg-ink-900/[0.03] p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-700">{summary.title}</h2>
+        <section className="rounded-lg bg-accent-50 p-5">
+          <h2 className="text-[13px] font-semibold text-accent-700">{summary.title}</h2>
           <ul className="mt-3 space-y-2">
             {summary.statements.map((st, i) => (
               <StatementItem key={i} st={st} numbers={numbers} />

@@ -8,11 +8,13 @@
   --color-ink-900: #10203a;
   --color-ink-800: #1b2f4f;
   --color-ink-700: #2a4266;
-  --color-accent-50: #effaf8;
-  --color-accent-100: #d5f2ec;
-  --color-accent-500: #14998a;
-  --color-accent-600: #0f7f73;
-  --color-accent-700: #0d665d;
+  --color-accent-50: #eef6f5;
+  --color-accent-100: #d7eae8;
+  --color-accent-200: #b3d6d3;
+  --color-accent-500: #3a8a8b;
+  --color-accent-600: #2f7375;
+  --color-accent-700: #245c5e;
+  --color-canvas: #f4f6f8;
 }
 
 html {
@@ -20,5 +22,5 @@ html {
 }
 
 body {
-  @apply bg-slate-50 text-slate-800;
+  @apply bg-canvas text-slate-800;
 }

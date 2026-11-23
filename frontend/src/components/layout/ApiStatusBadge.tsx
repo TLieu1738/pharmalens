@@ -14,7 +14,7 @@ export function ApiStatusBadge() {
 
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600"
+      className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600"
       title={health.kind === 'offline' ? health.message : undefined}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', dot)} />

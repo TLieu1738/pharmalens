@@ -19,7 +19,9 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 
 | **Deployed stack (live)** | 2026-11-23: frontend https://pharmalens-ten.vercel.app + API https://pharmalens-api-1e8g.onrender.com. Scripted test with two temporary Supabase users (deleted afterwards): research run via the deployed API completed in 58 s, all 5 sources ok, 45 statements / 61 refs / 0 unsupported; user B gets 404 on A's session and sees 0 rows via RLS; CORS allows only the Vercel origin; `/docs` hidden in production; no secrets in the JS bundle. |
 
-**Test suite:** 60 passed (`cd backend && .venv/bin/pytest`).
+| **Frontend redesign (2026-11-23)** | Sidebar workspace layout: Overview, Research Workspace, Evidence Library, Drug Intelligence, Clinical Trials, Saved Research. Rendered in headless Chrome against the local stack with a temporary user (deleted afterwards) after a real research run: all pages populated with real data, no console errors, mobile layout checked. Market Access & Costs deliberately not built (no real pricing source). |
+
+**Test suite:** 61 passed (`cd backend && .venv/bin/pytest`).
 
 ## Implemented but NOT yet verified
 - Supabase Auth sign-in UI and backend token verification against a real project.
@@ -43,12 +45,16 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 - Local `.env` uses `DEMO_MODE=false`: the API returns 401 to signed-out research requests (verified with curl).
 - Verified 2026-11-23: account created in the browser, research run completed and saved with the user as owner, listed under Saved research.
 
+## New API
+- `GET /api/library`: the signed-in user's evidence across all sessions, deduplicated by record ID, each with the sessions it came from (`tests/test_api_research.py::test_library_merges_users_evidence_and_is_private`).
+
 ## Known limitations
 - Background execution is an in-process asyncio task: not durable across restarts (interrupted sessions are marked failed on startup).
 - Without Supabase, storage is in-memory (lost on restart).
 - Retrieval takes top-ranked results per source (≈15 papers/source, 20 trials, ≤8 compounds, 15 targets) — not a systematic review.
 - Contradiction detection relies on the synthesis agent reading abstracts; it is not a formal meta-analysis.
 - PubChem and OpenAlex not integrated (ChEMBL/PubMed/Europe PMC cover the needs) — future work.
+- Library aggregates up to 50 most recent sessions per request (one evidence query per session); fine at demo scale, would need a single SQL query for heavy users.
 - Anonymous rate limiting is per-process memory and per IP.
 
 ## Environment notes (this machine)

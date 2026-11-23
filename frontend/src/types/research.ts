@@ -175,3 +175,14 @@ export interface EvidenceRecord {
 }
 
 export const TERMINAL_STATUSES: SessionStatus[] = ['completed', 'failed']
+
+export interface SessionRef {
+  session_id: string
+  research_question: string
+  created_at: string
+}
+
+/** An evidence record across the user's sessions (deduplicated), with the sessions it was retrieved in. */
+export interface LibraryRecord extends EvidenceRecord {
+  sessions: SessionRef[]
+}

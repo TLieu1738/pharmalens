@@ -1,7 +1,13 @@
-import { ArrowLeft, Loader2 } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Download, Loader2, Plus } from 'lucide-react'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { AgentStrip } from '@/components/research/AgentStrip'
 import { StatusBadge } from '@/components/research/StatusBadge'
+import { EmptyState } from '@/components/ui/Controls'
+import { buttonSecondary } from '@/components/ui/styles'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { useMySessions } from '@/hooks/useMySessions'
 import { useResearchSession } from '@/hooks/useResearchSession'
+import { downloadText, reportToMarkdown } from '@/lib/exportMarkdown'
 import { formatDate } from '@/lib/labels'
 import ResearchResults from './ResearchResults'
 import ResearchWorkspace from './ResearchWorkspace'
@@ -9,6 +15,25 @@ import ResearchWorkspace from './ResearchWorkspace'
 export default function ResearchSession() {
   const { sessionId } = useParams()
   return <ResearchSessionView key={sessionId} sessionId={sessionId} />
+}
+
+/** /research without an ID opens the most recent session. */
+export function LatestResearch() {
+  const { items, error } = useMySessions()
+  if (error) return <p className="text-sm text-rose-700">{error}</p>
+  if (!items) return <p className="text-sm text-slate-500">Loading…</p>
+  if (items.length) return <Navigate to={`/research/${items[0].session_id}`} replace />
+  return (
+    <div className="space-y-6">
+      <PageHeader crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Research' }]} title="Research Workspace" />
+      <EmptyState title="No research sessions yet">
+        <Link to="/" className="font-medium text-accent-700 hover:underline">
+          Ask your first research question
+        </Link>{' '}
+        to see agents retrieve and synthesise evidence here.
+      </EmptyState>
+    </div>
+  )
 }
 
 function ResearchSessionView({ sessionId }: { sessionId: string | undefined }) {
@@ -23,36 +48,55 @@ function ResearchSessionView({ sessionId }: { sessionId: string | undefined }) {
   }
   if (error && !data) {
     return (
-      <div className="py-16 text-center">
-        <h1 className="text-lg font-semibold text-ink-900">{error.status === 404 ? 'Session not found' : 'Could not load session'}</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {error.status === 404 ? 'It may belong to another account, or the link is incorrect.' : error.message}
-        </p>
-        <Link to="/" className="mt-4 inline-block text-sm font-medium text-accent-700 hover:underline">
+      <EmptyState title={error.status === 404 ? 'Session not found' : 'Could not load session'}>
+        {error.status === 404 ? 'It may belong to another account, or the link is incorrect.' : error.message}{' '}
+        <Link to="/" className="font-medium text-accent-700 hover:underline">
           Start new research
         </Link>
-      </div>
+      </EmptyState>
     )
   }
   if (!data) return null
 
   const completed = data.status === 'completed' && data.report
+  const plan = data.research_plan
+  const scope = plan
+    ? [plan.disease_area, plan.biological_targets.slice(0, 3).join(', '), plan.compounds.slice(0, 3).join(', ')].filter(Boolean).join(' · ')
+    : null
+
   return (
     <div className="space-y-6">
-      <header className="space-y-2">
-        <Link to="/" className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-ink-900">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> New research
-        </Link>
-        <h1 className="max-w-4xl text-xl font-semibold leading-snug tracking-tight text-ink-900">{data.research_question}</h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+      <PageHeader
+        crumbs={[{ label: 'Workspace', to: '/' }, { label: 'Research', to: '/saved' }, { label: plan?.disease_area ?? 'Session' }]}
+        title="Research Workspace"
+        subtitle="A structured, source-grounded investigation. You stay in control of the conclusion."
+        actions={
+          <>
+            <Link to="/" className={buttonSecondary}>
+              <Plus className="h-4 w-4" aria-hidden="true" /> New
+            </Link>
+            {completed && (
+              <button onClick={() => downloadText(`pharmalens-${data.session_id.slice(0, 8)}.md`, reportToMarkdown(data))} className={buttonSecondary}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Export report
+              </button>
+            )}
+          </>
+        }
+      />
+
+      <section className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+        <p className="text-[15px] leading-relaxed text-ink-900">{data.research_question}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-slate-500">
           <StatusBadge status={data.status} />
-          <span>Started {formatDate(data.created_at, true)}</span>
-          {data.completed_at && <span>· Evidence retrieved live during this run, finished {formatDate(data.completed_at, true)}</span>}
-          {data.report && <span>· AI-generated synthesis</span>}
-          {data.demo_mode && <span>· Unlisted demo session (anyone with the link can view)</span>}
+          {scope && <span>{scope}</span>}
+          <span>· Started {formatDate(data.created_at, true)}</span>
+          {data.completed_at && <span>· Evidence retrieved live, finished {formatDate(data.completed_at, true)}</span>}
         </div>
-        {error && <p className="text-xs text-amber-700">Connection issue while refreshing: {error.message}</p>}
-      </header>
+        {error && <p className="mt-2 text-xs text-amber-700">Connection issue while refreshing: {error.message}</p>}
+      </section>
+
+      <AgentStrip agents={data.agents} />
+
       {completed ? <ResearchResults session={data} /> : <ResearchWorkspace session={data} />}
     </div>
   )
