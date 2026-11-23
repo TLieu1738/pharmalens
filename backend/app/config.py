@@ -53,7 +53,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> list[str]:
-        origins = [self.frontend_url.rstrip("/")]
+        origins = [self.frontend_url.strip().rstrip("/")]
         origins += [o.strip().rstrip("/") for o in self.additional_cors_origins.split(",") if o.strip()]
         return [o for o in dict.fromkeys(origins) if o != "*"]
 
