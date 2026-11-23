@@ -86,7 +86,15 @@ Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for 
 | CORS now allows `PUT` (protocol "Save draft" was blocked in browsers on `phase-1`) | Live preflight returned 200 with `PUT` |
 | Frontend: Knowledge Graph, Drug Pipeline, trial comparison/timeline/distributions, PubChem and target panels on Drug Intelligence | TypeScript, lint, production build; headless Chrome against the live local API with a temporary user (deleted): no console errors |
 
-**Test suite:** 122 passed on `phase-2`.
+**Test suite:** 123 passed on `phase-2`.
+
+**Live compound path (2026-11-23, after ChEMBL recovered):** compound and target agents against live ChEMBL,
+PubChem and Open Targets for donepezil, lecanemab and memantine in Alzheimer disease: 3 exact ChEMBL matches; PubChem
+CIDs 3152 (donepezil) and 4054 (memantine) matched by InChIKey, lecanemab (antibody) skipped; 9 compound → target
+edges; 7 targets joined across Open Targets and ChEMBL by gene symbol. This exposed a bug present since the first
+version (including `main`): mechanisms were requested by the drug's own ChEMBL ID, but ChEMBL files many under the salt
+form, so donepezil and memantine had none. Fixed by querying `parent_molecule_chembl_id`; covered by
+`test_chembl_mechanisms_are_looked_up_by_parent_molecule`.
 
 **Live run (2026-11-23, real model and sources, in-memory storage, cap 10 per source):** protocol in 15 s with all seven sources selected; save draft and approve both 200; run completed in 185 s. OpenAlex returned 12 records, PubMed 12, ClinicalTrials.gov 10, Open Targets 10. **Europe PMC and ChEMBL were both returning HTTP 500/503 from EBI during this run**, so the run completed as partial (as designed) and no compounds, PubChem records or compound edges were produced. Graph: 41 entities, 37 edges, every edge traceable to a retrieved record; another user saw nothing (404 / empty). Claims: 20 supported, 19 partially supported, 7 hypotheses/gaps, 2 removed.
 
