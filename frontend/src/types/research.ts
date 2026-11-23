@@ -20,6 +20,7 @@ export type AgentName =
   | 'compound_agent'
   | 'evidence_validation'
   | 'research_synthesis'
+  | 'claim_verification'
 
 export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed' | 'skipped'
 
@@ -83,12 +84,17 @@ export interface ResearchPlan {
   known_limitations: string[]
 }
 
-export type StatementKind = 'finding' | 'hypothesis' | 'gap'
+export type StatementKind = 'finding' | 'clinical_outcome' | 'comparative_analysis' | 'interpretation' | 'hypothesis' | 'gap'
+export type ValidationStatus = 'supported' | 'partially_supported' | 'not_verified' | 'not_applicable' | 'unsupported' | 'contradicted'
 
 export interface Statement {
   text: string
   kind: StatementKind
   citations: string[]
+  limitations?: string[]
+  validation_status?: ValidationStatus
+  validation_notes?: string[]
+  support?: { record_id: string; verdict: string }[]
 }
 
 export interface ReportSection {
@@ -112,6 +118,9 @@ export interface RemovedStatement {
   section: string
   text: string
   reason: string
+  kind?: string | null
+  status?: string
+  citations?: string[]
 }
 
 export interface ReportIntegrity {
@@ -123,6 +132,10 @@ export interface ReportIntegrity {
   invalid_citations?: string[]
   records_provided?: number | null
   records_available?: number | null
+  validated?: boolean
+  semantic_check?: 'completed' | 'unavailable' | 'not_run'
+  status_counts?: Record<string, number>
+  relabelled?: RemovedStatement[]
 }
 
 export interface RunAudit {

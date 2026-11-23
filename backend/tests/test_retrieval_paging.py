@@ -3,7 +3,7 @@
 import httpx
 
 from app.agents.literature import retrieve_literature
-from app.agents.synthesis import ground_report
+from app.agents.verification import verify_report
 from app.integrations.clinical_trials import search_clinical_trials_paged
 from app.integrations.europe_pmc import build_query, search_europe_pmc_paged
 from app.integrations.open_targets import parse_associations
@@ -136,8 +136,18 @@ def _records() -> list[EvidenceRecord]:
     return [*pubmed, *targets]
 
 
-def test_grounding_records_what_was_removed_and_why() -> None:
-    report = ground_report(synthesis_output(), _records(), question="q", scope="s", model="m")
+async def test_grounding_records_what_was_removed_and_why() -> None:
+    report = await verify_report(
+        None,
+        synthesis_output(),
+        _records(),
+        persisted_ids=None,
+        context_numbers=[],
+        question="q",
+        scope="s",
+        model="m",
+        records_provided=len(_records()),
+    )
     removed = report.integrity.removed_statements
     assert [r.reason for r in removed] == ["finding with no citation"]
     assert removed[0].section == "Executive summary"

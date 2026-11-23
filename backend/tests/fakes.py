@@ -9,8 +9,9 @@ from pydantic import BaseModel
 
 from app.agents.llm import LLMError
 from app.agents.planner import PlannerOutput
+from app.agents.verification import CitationVerdict, ClaimVerdict, VerificationOutput
 from app.models.evidence import SourceName
-from app.models.report import Statement, StatementKind, SynthesisOutput
+from app.models.report import ClaimDraft, StatementKind, SynthesisOutput
 from tests.helpers import fixture_json, fixture_text
 
 T = TypeVar("T", bound=BaseModel)
@@ -40,18 +41,24 @@ PLAN = PlannerOutput(
 
 
 def synthesis_output() -> SynthesisOutput:
-    ok = Statement(
+    ok = ClaimDraft(
+        limitations=[],
         text="APP is the top-ranked Open Targets association.",
         kind=StatementKind.FINDING,
         citations=["open_targets:MONDO_0004975:ENSG00000142192"],
     )
-    review = Statement(
+    review = ClaimDraft(
+        limitations=[],
         text="A review addresses amyloid and tau PET use criteria.",
         kind=StatementKind.FINDING,
         citations=["pubmed:39776249", "pubmed:00000000"],
     )  # second id is fabricated
-    unsupported = Statement(text="Drug X cures the disease.", kind=StatementKind.FINDING, citations=[])
-    gap = Statement(text="Long-term outcomes remain unclear.", kind=StatementKind.GAP, citations=[])
+    unsupported = ClaimDraft(
+        limitations=[], text="Drug X cures the disease.", kind=StatementKind.FINDING, citations=[]
+    )
+    gap = ClaimDraft(
+        limitations=[], text="Long-term outcomes remain unclear.", kind=StatementKind.GAP, citations=[]
+    )
     return SynthesisOutput(
         executive_summary=[ok, unsupported],
         biological_targets=[ok],
@@ -67,10 +74,24 @@ def synthesis_output() -> SynthesisOutput:
 
 
 class FakeLLM:
-    def __init__(self, *, fail_on: type[BaseModel] | None = None) -> None:
+    """Planner, synthesis and claim-verification stand-in.
+
+    `verdict` decides the semantic check: a function (claim text, record_id) -> relevance; default "supports".
+    `synthesis` overrides the drafted report.
+    """
+
+    def __init__(
+        self,
+        *,
+        fail_on: type[BaseModel] | None = None,
+        verdict: Any = None,
+        synthesis: SynthesisOutput | None = None,
+    ) -> None:
         self.calls: list[str] = []
         self.prompts: list[str] = []
         self.fail_on = fail_on
+        self.verdict = verdict or (lambda text, rid: "supports")
+        self.synthesis = synthesis
 
     async def structured(
         self, *, system: str, prompt: str, output: type[T], effort: str = "medium", max_tokens: int = 16000
@@ -82,8 +103,42 @@ class FakeLLM:
         if output is PlannerOutput:
             return PLAN  # type: ignore[return-value]
         if output is SynthesisOutput:
-            return synthesis_output()  # type: ignore[return-value]
+            return self.synthesis or synthesis_output()  # type: ignore[return-value]
+        if output is VerificationOutput:
+            return self._verify(prompt)  # type: ignore[return-value]
         raise AssertionError(f"unexpected schema {output}")
+
+
+def _overall(relevances: list[str]) -> str:
+    if "contradicts" in relevances:
+        return "contradicted"
+    if "supports" in relevances:
+        return "supported"
+    if "partially_supports" in relevances:
+        return "partially_supported"
+    return "unsupported"
+
+
+def _verify_claims(self: FakeLLM, prompt: str) -> VerificationOutput:
+    import json
+
+    claims = prompt.split("<claims>\n", 1)[1].split("\n</claims>", 1)[0].splitlines()
+    verdicts = []
+    for line in claims:
+        c = json.loads(line)
+        cites = [CitationVerdict(record_id=r, relevance=self.verdict(c["text"], r)) for r in c["citations"]]
+        verdicts.append(
+            ClaimVerdict(
+                claim_id=c["claim_id"],
+                overall=_overall([v.relevance for v in cites]),
+                citations=cites,
+                note="fake verdict",
+            )
+        )
+    return VerificationOutput(verdicts=verdicts)
+
+
+FakeLLM._verify = _verify_claims  # type: ignore[attr-defined]
 
 
 def source_router(*, fail_hosts: set[str] | None = None):

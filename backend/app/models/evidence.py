@@ -75,6 +75,15 @@ class Identifiers(BaseModel):
         return out
 
 
+class Provenance(BaseModel):
+    """Where a record came from. Set only by source parsers (see integrations/provenance.py)."""
+
+    origin: str = "source_api"
+    api_url: str = Field(description="Request that returns exactly this record from the source API.")
+    payload_sha256: str = Field(pattern=r"^[0-9a-f]{64}$", description="Fingerprint of the raw source item.")
+    parser: str
+
+
 class EvidenceRecord(BaseModel):
     """One retrieved record, normalised across sources. Never constructed from LLM output."""
 
@@ -97,6 +106,8 @@ class EvidenceRecord(BaseModel):
     journal: str | None = None
     publication_types: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # None only for records stored before provenance tracking existed; new records always carry it.
+    provenance: Provenance | None = None
     # Populated by the validation step
     quality_flags: list[QualityFlag] = Field(default_factory=list)
     also_found_in: list[SourceName] = Field(default_factory=list)

@@ -13,6 +13,7 @@ from app.integrations._parsing import clean_text, date_from_text, normalise_date
 from app.integrations.http import SourceError, SourceHttpClient
 from app.integrations.literature_types import classify_publication
 from app.integrations.paging import PAGE_SIZE, SearchPage, as_int
+from app.integrations.provenance import make_provenance
 from app.models.evidence import EvidenceCategory, EvidenceRecord, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,9 @@ def _parse_article(article: ET.Element) -> EvidenceRecord | None:
         title=title,
         summary=abstract,
         source_url=f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
+        provenance=make_provenance(
+            "pubmed", f"{BASE_URL}/efetch.fcgi?db=pubmed&id={pmid}&retmode=xml", article
+        ),
         publication_date=pub_date,
         identifiers=Identifiers(pmid=pmid, doi=ids.get("doi") or None, pmcid=ids.get("pmc") or None),
         authors=authors,

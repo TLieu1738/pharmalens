@@ -15,7 +15,7 @@ import httpx
 from app.config import Settings
 from app.models.agents import AgentExecution
 from app.models.evidence import EvidenceRecord
-from app.models.report import ResearchReport
+from app.models.report import ResearchReport, ensure_publishable
 from app.models.research import (
     RUNNING_STATUSES,
     TERMINAL_STATUSES,
@@ -294,6 +294,7 @@ class SupabaseSessionRepository:
     async def complete(
         self, session_id: str, report: ResearchReport, profile: dict[str, Any], warnings: list[str]
     ) -> None:
+        ensure_publishable(report)  # no unverified report is ever stored
         summary = next((s for s in report.sections if s.key == "executive_summary"), None)
         await self._req(
             "POST",
@@ -446,6 +447,7 @@ def _evidence_to_row(session_id: str, position: int, r: EvidenceRecord) -> dict[
             "publication_types": r.publication_types,
             "quality_flags": [f.value for f in r.quality_flags],
             "also_found_in": [s.value for s in r.also_found_in],
+            "provenance": r.provenance.model_dump() if r.provenance else None,
         },
     }
 
@@ -470,4 +472,5 @@ def _row_to_evidence(row: dict[str, Any]) -> EvidenceRecord:
         metadata=md.get("source_metadata") or {},
         quality_flags=md.get("quality_flags") or [],
         also_found_in=md.get("also_found_in") or [],
+        provenance=md.get("provenance"),
     )

@@ -3,12 +3,13 @@
     Planning graph:   START → planner → END                      (then the user reviews the protocol)
 
     Execution graph:  START ─┬─> literature ───────────────┐
-                             ├─> clinical ──> compounds ───┼─> validation → synthesis → END
+                             ├─> clinical ──> compounds ───┼─> validation → synthesis → verification → END
                              └─> targets ──────────────────┘
 
 Literature, clinical and target retrieval run in parallel. The compound agent waits for the clinical agent so
 it can look up investigational products named in real trial registrations. A failure in one retrieval agent
 is recorded and the workflow continues with partial evidence; planner or synthesis failure fails the session.
+Nothing reaches `report` without passing the verification node, and repositories refuse unverified reports.
 """
 
 from __future__ import annotations
@@ -28,13 +29,15 @@ from app.agents.compounds import retrieve_compounds
 from app.agents.literature import retrieve_literature
 from app.agents.llm import LLMError, StructuredLLM
 from app.agents.planner import plan_research
-from app.agents.synthesis import synthesise_report
+from app.agents.synthesis import MAX_RECORDS_IN_PROMPT, describe_scope, draft_report
 from app.agents.targets import retrieve_targets
 from app.agents.validation import validate_evidence
+from app.agents.verification import profile_numbers, verify_report
 from app.graph.progress import NullReporter, ProgressReporter
 from app.graph.state import ResearchState
 from app.integrations.http import SourceHttpClient
 from app.models.agents import AgentExecution, AgentName, ExecutionStatus
+from app.models.report import REPORT_SECTIONS
 from app.models.research import ResearchPlan, SessionStatus
 
 logger = logging.getLogger(__name__)
@@ -55,6 +58,9 @@ class WorkflowDeps:
     ncbi_api_key: str | None = None
     # Checked before each agent starts; returning True stops the run (user cancelled the job).
     should_stop: Callable[[], Awaitable[bool]] | None = None
+    # IDs of evidence persisted for this session; citations outside it are rejected (ownership check).
+    persisted_ids: Callable[[], Awaitable[set[str]]] | None = None
+    semantic_verification: bool = True
 
 
 def _tracked(
@@ -170,26 +176,44 @@ def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns (planning, exe
 
     async def synthesis(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:
         await deps.reporter.status_changed(SessionStatus.SYNTHESISING)
-        report = await synthesise_report(
+        draft = await draft_report(
             deps.llm,
             question=state["research_question"],
             plan=state["research_plan"],
             records=state["validated_evidence"],
             profile=state["evidence_profile"],
-            failed_sources=sorted(set(state.get("failed_sources", []))),
-            model_name=deps.model_name,
         )
-        ex.record_count = len(report.references)
-        integrity = report.integrity
+        drafted = sum(len(getattr(draft, k)) for k, _ in REPORT_SECTIONS)
+        ex.record_count = drafted
+        ex.message = f"Drafted {drafted} claims for verification"
+        return {"draft": draft}
+
+    async def verification(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:
+        records = state["validated_evidence"]
+        persisted = await deps.persisted_ids() if deps.persisted_ids else None
+        report = await verify_report(
+            deps.llm if deps.semantic_verification else None,
+            state["draft"],
+            records,
+            persisted_ids=persisted,
+            context_numbers=profile_numbers(state.get("evidence_profile") or {}),
+            question=state["research_question"],
+            scope=describe_scope(
+                state["research_plan"],
+                state.get("evidence_profile") or {},
+                sorted(set(state.get("failed_sources", []))),
+            ),
+            model=deps.model_name,
+            records_provided=min(len(records), MAX_RECORDS_IN_PROMPT),
+        )
+        i = report.integrity
+        published = i.statements_total - i.statements_removed_unsupported
+        ex.record_count = published
         ex.message = (
-            f"{integrity.statements_total - integrity.statements_removed_unsupported} statements, "
-            f"{len(report.references)} cited records"
+            f"{published} of {i.statements_total} claims published, {len(report.references)} cited records; "
+            f"removed {i.statements_removed_unsupported}, relabelled {len(i.relabelled)}, "
+            f"dropped {i.citations_removed_invalid} citations; semantic check {i.semantic_check.replace('_', ' ')}"
         )
-        if integrity.statements_removed_unsupported or integrity.citations_removed_invalid:
-            ex.message += (
-                f"; removed {integrity.statements_removed_unsupported} unsupported statements and "
-                f"{integrity.citations_removed_invalid} invalid citations"
-            )
         return {"report": report}
 
     def fan_out(state: ResearchState) -> list[str] | str:
@@ -213,8 +237,14 @@ def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns (planning, exe
     execution.add_conditional_edges(START, fan_out, ["literature", "clinical", "targets", END])
     execution.add_edge("clinical", "compounds")
     execution.add_edge(["literature", "targets", "compounds"], "validation")
+    execution.add_node("verification", _tracked(AgentName.VERIFICATION, deps, verification))
     execution.add_conditional_edges("validation", after_validation, ["synthesis", END])
-    execution.add_edge("synthesis", END)
+    execution.add_conditional_edges(
+        "synthesis",
+        lambda st: "verification" if st.get("draft") and not st.get("cancelled") else END,
+        ["verification", END],
+    )
+    execution.add_edge("verification", END)
     return planning.compile(), execution.compile()
 
 

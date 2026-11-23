@@ -27,12 +27,14 @@ from app.graph.workflow import WorkflowDeps, run_execution, run_planning
 from app.integrations.http import SourceHttpClient
 from app.models.agents import AgentExecution
 from app.models.evidence import EvidenceRecord
+from app.models.report import ReportNotPublishableError
 from app.models.research import ResearchPlan, SessionStatus
 from app.services.repository import ClaimedJob, SessionRepository
 
 logger = logging.getLogger(__name__)
 
 PLANNER_EFFORT = "low"
+VERIFIER_EFFORT = "low"
 SYNTHESIS_EFFORT = "medium"
 
 
@@ -87,7 +89,12 @@ def build_audit(
         if len(r.metadata.get("merged_record_ids", [])) > 1
     ]
     return {
-        "model": {"id": model, "planner_effort": PLANNER_EFFORT, "synthesis_effort": SYNTHESIS_EFFORT},
+        "model": {
+            "id": model,
+            "planner_effort": PLANNER_EFFORT,
+            "synthesis_effort": SYNTHESIS_EFFORT,
+            "verifier_effort": VERIFIER_EFFORT,
+        },
         "attempts": attempts,
         "execution_started_at": started.isoformat(),
         "execution_finished_at": datetime.now(UTC).isoformat(),
@@ -220,7 +227,12 @@ class JobRunner:
         async def should_stop() -> bool:
             return await self._repo.get_status(job.session_id) == SessionStatus.CANCELLED
 
+        async def persisted_ids() -> set[str]:
+            return {r.record_id for r in await self._repo.get_evidence(job.session_id)}
+
         return WorkflowDeps(
+            persisted_ids=persisted_ids,
+            semantic_verification=self._settings.semantic_claim_verification,
             llm=llm,
             http=self._http,
             model_name=getattr(llm, "model", None) or self._settings.anthropic_model or "unspecified",
@@ -278,7 +290,16 @@ class JobRunner:
             build_audit(state, model=deps.model_name, attempts=job.attempts, started=started, plan=job.plan),
         )
         if report is not None:
-            await self._repo.complete(job.session_id, report, profile or {}, warnings)
+            try:
+                await self._repo.complete(job.session_id, report, profile or {}, warnings)
+            except ReportNotPublishableError as exc:
+                logger.error("report_blocked session_id=%s reason=%s", job.session_id, exc)
+                await self._repo.fail(
+                    job.session_id,
+                    "The report failed claim verification and was not published.",
+                    profile,
+                    warnings,
+                )
         else:
             errors = state.get("errors") or ["research could not be completed"]
             await self._repo.fail(job.session_id, "; ".join(errors), profile, warnings)

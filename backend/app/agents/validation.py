@@ -11,6 +11,7 @@ from typing import Any
 
 from app.models.evidence import EvidenceRecord, QualityFlag
 from app.services.evidence_processing import process_evidence
+from app.services.record_checks import record_problems
 
 
 @dataclass
@@ -22,7 +23,15 @@ class ValidationResult:
 
 
 def validate_evidence(records: list[EvidenceRecord]) -> ValidationResult:
-    validated, removed = process_evidence(records)
+    accepted: list[EvidenceRecord] = []
+    rejected: list[dict[str, Any]] = []
+    for record in records:
+        problems = record_problems(record)
+        if problems:
+            rejected.append({"record_id": record.record_id, "problems": problems})
+        else:
+            accepted.append(record)
+    validated, removed = process_evidence(accepted)
     by_type = Counter(r.evidence_type.value for r in validated)
     by_category = Counter(r.category.value for r in validated)
     by_source = Counter(r.source_name.value for r in validated)
@@ -33,6 +42,8 @@ def validate_evidence(records: list[EvidenceRecord]) -> ValidationResult:
     )
 
     warnings: list[str] = []
+    if rejected:
+        warnings.append(f"{len(rejected)} record(s) rejected: malformed identifiers or missing provenance.")
     if flags.get(QualityFlag.NOT_PEER_REVIEWED):
         warnings.append(f"{flags[QualityFlag.NOT_PEER_REVIEWED]} preprint(s) included — not peer reviewed.")
     if flags.get(QualityFlag.RETRACTED):
@@ -60,5 +71,7 @@ def validate_evidence(records: list[EvidenceRecord]) -> ValidationResult:
         "trial_status": dict(trial_status),
         "publication_year_range": [years[0], years[-1]] if years else None,
         "cross_source_matches": sum(1 for r in validated if r.also_found_in),
+        "records_rejected": len(rejected),
+        "rejected": rejected[:50],
     }
     return ValidationResult(records=validated, duplicates_removed=removed, profile=profile, warnings=warnings)

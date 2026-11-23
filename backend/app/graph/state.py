@@ -7,7 +7,7 @@ from typing import Annotated, Any, TypedDict
 
 from app.models.agents import AgentExecution
 from app.models.evidence import EvidenceRecord
-from app.models.report import ResearchReport
+from app.models.report import ResearchReport, SynthesisOutput
 from app.models.research import ResearchPlan
 
 
@@ -25,6 +25,7 @@ class ResearchState(TypedDict, total=False):
     target_records: list[EvidenceRecord]
     validated_evidence: list[EvidenceRecord]
     evidence_profile: dict[str, Any]
+    draft: SynthesisOutput | None
     report: ResearchReport | None
     # Parallel branches write these concurrently, so they need reducers.
     agent_statuses: Annotated[dict[str, AgentExecution], merge_dicts]

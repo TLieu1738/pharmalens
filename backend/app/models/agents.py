@@ -14,6 +14,7 @@ class AgentName(StrEnum):
     COMPOUNDS = "compound_agent"
     VALIDATION = "evidence_validation"
     SYNTHESIS = "research_synthesis"
+    VERIFICATION = "claim_verification"
 
 
 AGENT_ORDER: list[AgentName] = list(AgentName)
@@ -26,6 +27,7 @@ AGENT_LABELS: dict[AgentName, str] = {
     AgentName.COMPOUNDS: "Compound Agent",
     AgentName.VALIDATION: "Evidence Validation Agent",
     AgentName.SYNTHESIS: "Research Synthesis Agent",
+    AgentName.VERIFICATION: "Claim Verification Agent",
 }
 
 

@@ -84,7 +84,41 @@ export function RunAuditView({ session }: { session: SessionDetail }) {
         )}
       </Block>
 
-      <Block n={7} title="Statements removed by the grounding check">
+      <Block n={7} title="Claim verification">
+        {!integrity ? (
+          <p className="text-sm text-slate-500">No report was generated.</p>
+        ) : (
+          <div className="space-y-2 text-sm text-slate-700">
+            <p>
+              Citations checked against this session's saved evidence; numbers, price, efficacy and approval rules applied in code; support
+              check by a separate model call: <strong>{integrity.semantic_check === 'completed' ? 'completed' : integrity.semantic_check === 'unavailable' ? 'unavailable (claims marked “Not verified”)' : 'not run'}</strong>.
+            </p>
+            {integrity.status_counts && (
+              <ul className="flex flex-wrap gap-2">
+                {Object.entries(integrity.status_counts).map(([k, v]) => (
+                  <li key={k} className="rounded border border-slate-200 px-2 py-1 font-mono text-xs">
+                    {k.replace(/_/g, ' ')}: {v}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {(integrity.relabelled?.length ?? 0) > 0 && (
+              <div>
+                <p className="mt-2 font-medium text-ink-900">Relabelled as hypotheses</p>
+                <ul className="mt-1 space-y-1">
+                  {integrity.relabelled!.map((r, i) => (
+                    <li key={i} className="text-xs text-slate-600">
+                      “{r.text}” — {r.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </Block>
+
+      <Block n={8} title="Claims removed before publication">
         {!integrity ? (
           <p className="text-sm text-slate-500">No report was generated.</p>
         ) : removed.length === 0 ? (
@@ -98,7 +132,9 @@ export function RunAuditView({ session }: { session: SessionDetail }) {
               <li key={i} className="rounded-md border border-rose-100 bg-rose-50/50 px-3 py-2 text-sm">
                 <p className="text-slate-700 line-through decoration-rose-300">{r.text}</p>
                 <p className="mt-0.5 text-xs text-rose-700">
-                  {r.section} · {r.reason}
+                  {r.section} · {r.status ? `${r.status} · ` : ''}
+                  {r.reason}
+                  {r.citations?.length ? ` · cited ${r.citations.join(', ')}` : ''}
                 </p>
               </li>
             ))}

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     job_lease_seconds: int = Field(default=90, ge=10, le=600)
     job_max_attempts: int = Field(default=2, ge=1, le=5)
     job_poll_seconds: float = Field(default=2.0, gt=0, le=60)
+    # Second LLM pass that checks each cited record supports its claim (adds roughly 15-30 s per run).
+    semantic_claim_verification: bool = True
 
     http_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
 

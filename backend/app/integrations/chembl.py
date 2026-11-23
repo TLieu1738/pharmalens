@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from app.integrations.http import SourceError, SourceHttpClient
+from app.integrations.provenance import make_provenance
 from app.models.evidence import EvidenceCategory, EvidenceRecord, EvidenceType, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,9 @@ def parse_molecules(data: Any, *, query: str) -> list[EvidenceRecord]:
                 title=name.title() if name.isupper() else name,
                 summary=" ".join(summary_bits),
                 source_url=f"https://www.ebi.ac.uk/chembl/explore/compound/{chembl_id}",
+                provenance=make_provenance(
+                    "chembl", f"https://www.ebi.ac.uk/chembl/api/data/molecule/{chembl_id}.json", mol
+                ),
                 identifiers=Identifiers(chembl_id=chembl_id),
                 metadata={
                     "query": query,

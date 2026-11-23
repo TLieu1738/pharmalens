@@ -38,7 +38,7 @@ async def test_complete_workflow_produces_grounded_report() -> None:
             WorkflowDeps(llm=llm, http=http, model_name="fake", reporter=reporter), "s1", QUESTION
         )
 
-    assert llm.calls == ["PlannerOutput", "SynthesisOutput"]
+    assert llm.calls == ["PlannerOutput", "SynthesisOutput", "VerificationOutput"]
     statuses = state["agent_statuses"]
     assert set(statuses) == {a.value for a in AgentName}
     assert all(s.status == ExecutionStatus.COMPLETED for s in statuses.values()), statuses
@@ -51,6 +51,7 @@ async def test_complete_workflow_produces_grounded_report() -> None:
 
     report = state["report"]
     assert report is not None
+    assert report.integrity.validated and report.integrity.semantic_check == "completed"
     # Fabricated citation and the uncited "finding" were removed by grounding.
     assert report.integrity.citations_removed_invalid == 1
     assert report.integrity.statements_removed_unsupported == 1

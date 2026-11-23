@@ -55,8 +55,16 @@ export function reportToMarkdown(session: SessionDetail): string {
     lines.push(`## ${section.title}`, '')
     if (!section.statements.length) lines.push('_No supported statements._')
     for (const st of section.statements) {
-      const tag = st.kind === 'hypothesis' ? '**Hypothesis:** ' : st.kind === 'gap' ? '**Open question:** ' : ''
-      lines.push(`- ${tag}${st.text}${cite(st.citations)}`)
+      const tags: Record<string, string> = {
+        hypothesis: '**Hypothesis:** ',
+        gap: '**Open question:** ',
+        interpretation: '**Interpretation:** ',
+        clinical_outcome: '**Clinical outcome:** ',
+        comparative_analysis: '**Comparison:** ',
+      }
+      const status = st.validation_status === 'partially_supported' ? ' _(partially supported)_' : st.validation_status === 'not_verified' ? ' _(not verified)_' : ''
+      const limits = st.limitations?.length ? ` _Limitations: ${st.limitations.join(' ')}_` : ''
+      lines.push(`- ${tags[st.kind] ?? ''}${st.text}${cite(st.citations)}${status}${limits}`)
     }
     lines.push('')
   }

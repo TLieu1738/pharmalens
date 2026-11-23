@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.integrations.http import SourceError, SourceHttpClient
+from app.integrations.provenance import make_provenance
 from app.models.evidence import EvidenceCategory, EvidenceRecord, EvidenceType, Identifiers, SourceName
 
 GRAPHQL_URL = "https://api.platform.opentargets.org/api/v4/graphql"
@@ -82,6 +83,11 @@ def parse_associations(payload: Any, *, focus_targets: list[str]) -> list[Eviden
                     f"{evidence_kinds or 'not specified'}. Association does not establish causation."
                 ),
                 source_url=f"https://platform.opentargets.org/evidence/{ensembl_id}/{disease['id']}",
+                provenance=make_provenance(
+                    "open_targets",
+                    f"https://api.platform.opentargets.org/api/v4/graphql#disease={disease['id']}&target={ensembl_id}",
+                    row,
+                ),
                 identifiers=Identifiers(ensembl_id=ensembl_id),
                 metadata={
                     "disease_id": disease["id"],

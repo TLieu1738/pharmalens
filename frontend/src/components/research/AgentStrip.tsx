@@ -11,6 +11,7 @@ const SHORT_NAMES: Record<string, string> = {
   compound_agent: 'Compounds',
   evidence_validation: 'Validation',
   research_synthesis: 'Synthesis',
+  claim_verification: 'Verification',
 }
 
 const STATE: Record<ExecutionStatus, { icon: typeof Check; cls: string }> = {
@@ -28,7 +29,8 @@ function detail(a: AgentExecution): string {
   if (a.status === 'failed') return 'Failed'
   if (a.status === 'skipped') return 'Skipped'
   if (a.agent_name === 'research_planner') return 'Plan ready'
-  if (a.agent_name === 'research_synthesis') return 'Report written'
+  if (a.agent_name === 'research_synthesis') return `${a.record_count ?? 0} claims drafted`
+  if (a.agent_name === 'claim_verification') return `${a.record_count ?? 0} claims published`
   if (a.agent_name === 'evidence_validation') return `${a.record_count ?? 0} records checked`
   return `${a.record_count ?? 0} found${a.status === 'partial' ? ' · partial' : ''}`
 }
@@ -38,7 +40,7 @@ export function AgentStrip({ agents }: { agents: AgentExecution[] }) {
   return (
     <section aria-label="Research agents" className="rounded-lg border border-slate-200 bg-white px-5 py-4">
       <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Research agents</p>
-      <ol className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 xl:grid-cols-7">
+      <ol className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4 xl:grid-cols-8">
         {agents.map((a) => {
           const { icon: Icon, cls } = STATE[a.status]
           return (

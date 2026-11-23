@@ -18,7 +18,7 @@ from typing import Any, Protocol
 
 from app.models.agents import AGENT_ORDER, AgentExecution
 from app.models.evidence import EvidenceRecord
-from app.models.report import ResearchReport
+from app.models.report import ResearchReport, ensure_publishable
 from app.models.research import (
     RUNNING_STATUSES,
     TERMINAL_STATUSES,
@@ -235,6 +235,7 @@ class InMemorySessionRepository:
         self._sessions[session_id].evidence = list(records)
 
     async def complete(self, session_id, report, profile, warnings) -> None:  # type: ignore[no-untyped-def]
+        ensure_publishable(report)  # no unverified report is ever stored
         s = self._sessions[session_id]
         if s.status == SessionStatus.CANCELLED:
             return

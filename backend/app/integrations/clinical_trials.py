@@ -12,6 +12,7 @@ from typing import Any
 from app.integrations._parsing import clean_text, date_from_text, truncate
 from app.integrations.http import SourceError, SourceHttpClient
 from app.integrations.paging import PAGE_SIZE, SearchPage, as_int
+from app.integrations.provenance import make_provenance
 from app.models.evidence import EvidenceCategory, EvidenceRecord, EvidenceType, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,21 @@ def parse_studies(data: Any) -> list[EvidenceRecord]:
     return records
 
 
+def _outcomes(proto: dict[str, Any], key: str, limit: int = 5) -> list[dict[str, str]]:
+    """Registered outcome *measures* (what the trial plans to measure), not outcome results."""
+    out = []
+    for o in ((proto.get("outcomesModule") or {}).get(key) or [])[:limit]:
+        measure = clean_text(o.get("measure"))
+        if measure:
+            out.append(
+                {
+                    "measure": truncate(measure, 300),
+                    "time_frame": truncate(clean_text(o.get("timeFrame")) or "", 120),
+                }
+            )
+    return out
+
+
 def _humanise(value: str | None) -> str | None:
     return value.replace("_", " ").title() if value else None
 
@@ -140,6 +156,7 @@ def _parse_study(study: dict[str, Any]) -> EvidenceRecord | None:
         title=clean_text(title) or nct_id,
         summary=truncate(clean_text((proto.get("descriptionModule") or {}).get("briefSummary")), 1500),
         source_url=f"https://clinicaltrials.gov/study/{nct_id}",
+        provenance=make_provenance("clinical_trials", f"{STUDIES_URL}/{nct_id}", study),
         publication_date=date_from_text(start),
         identifiers=Identifiers(nct_id=nct_id),
         metadata={
@@ -151,6 +168,12 @@ def _parse_study(study: dict[str, Any]) -> EvidenceRecord | None:
             "masking": _humanise((design_info.get("maskingInfo") or {}).get("masking")),
             "primary_purpose": _humanise(design_info.get("primaryPurpose")),
             "enrollment": (design.get("enrollmentInfo") or {}).get("count"),
+            # ACTUAL or ESTIMATED: an estimated enrolment is a target, not a participant count.
+            "enrollment_type": _humanise((design.get("enrollmentInfo") or {}).get("type")),
+            "primary_outcomes": _outcomes(proto, "primaryOutcomes"),
+            "secondary_outcome_count": len(
+                (proto.get("outcomesModule") or {}).get("secondaryOutcomes") or []
+            ),
             "conditions": conditions,
             "interventions": interventions,
             "lead_sponsor": sponsor,

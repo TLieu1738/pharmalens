@@ -15,7 +15,8 @@ export const AGENT_LABELS: Record<AgentName, { name: string; detail: string }> =
   target_agent: { name: 'Biological Target Agent', detail: 'Open Targets Platform' },
   compound_agent: { name: 'Compound Agent', detail: 'ChEMBL (plan + trial interventions)' },
   evidence_validation: { name: 'Evidence Validation', detail: 'Deduplication and quality flags' },
-  research_synthesis: { name: 'Research Synthesis', detail: 'AI model writes a cited briefing' },
+  research_synthesis: { name: 'Research Synthesis', detail: 'AI model drafts cited claims' },
+  claim_verification: { name: 'Claim Verification', detail: 'Checks citations, numbers and support before publishing' },
 }
 
 export const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {

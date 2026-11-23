@@ -19,7 +19,8 @@ Job runner (inside the API process, or `python -m app.worker`)
 LangGraph — planning graph:   planner (LLM) → protocol saved → status awaiting_approval
             execution graph:  ┬─> literature (PubMed + Europe PMC, every protocol query) ─┐
                               ├─> clinical (ClinicalTrials.gov) ──> compounds (ChEMBL) ────┼─> validation → synthesis (LLM)
-                              └─> targets (Open Targets) ──────────────────────────────────┘    (rules)      + grounding check
+                              └─> targets (Open Targets) ──────────────────────────────────┘    (rules)
+                                                                       → claim verification (rules + LLM support check) → publish
    │  every agent writes its status, timings and per-query coverage as it runs
    ▼
 Supabase Postgres: research_sessions (also the job record) · agent_executions · evidence_records · research_reports
@@ -50,7 +51,8 @@ A job re-queued after an interruption returns to `pending` or `queued` with `att
 | Biological Target | Deterministic | Open Targets disease→target associations (rank, datatype scores) |
 | Compound | Deterministic | protocol compounds **plus** drug interventions from retrieved trials → ChEMBL (exact name/synonym matches only) + mechanisms |
 | Evidence Validation | Deterministic | union-find deduplication across DOI/PMID/PMCID/NCT/ChEMBL/Ensembl IDs, quality flags, evidence profile |
-| Research Synthesis | LLM (structured output, effort `medium`) + grounding | validated evidence + approved protocol → report; code then removes invalid citations and uncited findings and builds the references from real records |
+| Research Synthesis | LLM (structured output, effort `medium`) | validated evidence + approved protocol → *draft* claims (typed, with citations and limitations). Never published directly. |
+| Claim Verification | Deterministic rules + separate LLM support check (effort `low`) | draft → publishable report: removes fabricated/foreign citations, unsupported or contradicted factual claims, relabels unsupported interpretations as hypotheses, builds references from real records |
 
 ### Why retrieval is deterministic and the LLM only plans and writes
 - Source data must be exact and reproducible; an LLM calling APIs or recalling results can fabricate identifiers.
@@ -91,18 +93,49 @@ lives in the existing Postgres table rather than Redis/Celery.
   the cap is below the matching total, a warning says so in the run ("took the top 20 of 3,412…").
 - Date ranges apply to publication year and trial start date; preprints can be excluded at the source.
 
-## Scientific-integrity controls
+## Evidence integrity
 
-1. The LLM never retrieves data; every record originates from a source API with its URL and retrieval timestamp.
-2. The synthesis prompt contains only retrieved records and the approved protocol; output is schema-validated.
-3. Retrieved text is treated as data: the prompt instructs the model never to follow instructions found inside
-   evidence (prompt-injection defence), and nothing from the evidence can change which tools or sources run.
-4. Grounding: citations that do not match a retrieved `record_id` are dropped; findings left without a valid
-   citation are removed. Each removal is stored with its section and reason and shown in the audit view.
-5. Statements are typed `finding` / `hypothesis` / `gap`; hypotheses and open questions are labelled in the UI.
-6. Validation flags preprints, retractions, stopped trials, completed trials without posted results, missing
-   abstracts/dates/authors and withdrawn compounds. No numeric confidence scores are invented.
-7. Report sections without supported statements are omitted rather than filled.
+Integrity is enforced in code at four points, not by prompts alone.
+
+**1. Provenance (retrieval).** Every `EvidenceRecord` carries a `Provenance` block set only by source parsers:
+the exact API request that returns the record, a SHA-256 fingerprint of the raw source item, and the parser
+version. LLM output schemas contain only text and record-ID strings, so a model cannot create evidence.
+
+**2. Record validation (Evidence Validation agent).** Before anything is persisted, each record must have a
+well-formed identifier for its source (PMID digits, `NCT` + 8 digits, `CHEMBL` + digits, Europe PMC
+`SRC:ID`, Open Targets `disease:ENSG…`), a `record_id` matching source + identifier, a URL on that source's own
+domain, and provenance pointing at that source's API. Failures are rejected and reported, never repaired.
+Deduplication then merges records that share stable identifiers.
+
+**3. Claim verification (new agent, between synthesis and publication).** Claims are typed: `finding`,
+`clinical_outcome`, `comparative_analysis` (factual), `interpretation`, `hypothesis`, `gap`. Each carries its
+own limitations. Existence and support are checked separately:
+
+| Check | How | Failure |
+| --- | --- | --- |
+| Citation exists in this run's validated evidence **and** in evidence persisted for this session | Deterministic | Citation dropped; a factual claim left with none is removed ("fabricated or foreign record") |
+| Every number in the claim appears in its cited records (or in statistics PharmaLens computed) | Deterministic; sources read permissively, claims strictly; rounding allowed | Removed: "numbers not found in the cited sources" (blocks invented enrolment, rates, doses) |
+| Price, cost, ICER or QALY statements | Deterministic; no pricing source exists | Removed: "no pricing data was retrieved" |
+| Efficacy or clinical-outcome claims citing only trial registrations | Deterministic | Removed: registration/status is not outcome evidence |
+| "Approved" claims citing only compounds whose ChEMBL max phase < 4 | Deterministic | Removed as contradicted |
+| Comparisons citing fewer than two records | Deterministic | Published as partially supported, with a note |
+| Each cited record supports / partially supports / is irrelevant to / contradicts the claim | Separate LLM call, strict instructions, evidence treated as data | Irrelevant citations dropped; unsupported or contradicted factual claims removed; unsupported interpretations relabelled as hypotheses |
+
+If the support check is unavailable, claims are published as **Not verified** (visible in the report), never as
+verified. Every removal and relabelling is stored with section, claim type, status, reason and citations.
+
+**4. Publication gate (repositories).** `ensure_publishable` runs inside both repositories' `complete()`: a report
+is refused unless verification marked it validated, every factual claim has citations and a publishable status,
+and every citation has a reference built from a real record. A refused report fails the session ("failed claim
+verification") instead of being saved.
+
+**Missing data.** Trial digests state "outcome results: not retrieved (registry entry only)"; enrolment carries
+ACTUAL/ESTIMATED; missing enrolment, mechanisms or approval are given to the model as "not reported" / "not
+recorded"; registered primary outcome *measures* are captured as measures, not results.
+
+Other controls: statements are labelled by type in the UI; validation flags preprints, retractions, stopped
+trials, trials without posted results, missing metadata and withdrawn compounds; empty report sections are
+omitted rather than filled; prompts tell models never to follow instructions found inside evidence.
 
 ## Report structure
 

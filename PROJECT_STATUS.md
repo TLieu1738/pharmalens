@@ -23,7 +23,7 @@ _Last updated: 2026-11-23. Interview demo: Tuesday 2026-11-24._
 
 | **Frontend redesign (2026-11-23)** | Sidebar workspace layout: Overview, Research Workspace, Evidence Library, Drug Intelligence, Clinical Trials, Saved Research. Rendered in headless Chrome against the local stack with a temporary user (deleted afterwards) after a real research run: all pages populated with real data, no console errors, mobile layout checked. Market Access & Costs deliberately not built (no real pricing source). |
 
-**Test suite:** 81 passed on `phase-1` (61 on `main`) (`cd backend && .venv/bin/pytest`).
+**Test suite:** 104 passed on `phase-1` (61 on `main`) (`cd backend && .venv/bin/pytest`).
 
 ## Implemented but NOT yet verified
 - Supabase Auth sign-in UI and backend token verification against a real project.
@@ -57,7 +57,23 @@ _Last updated: 2026-11-23. Interview demo: Tuesday 2026-11-24._
 | Grounding audit (removed statements with reasons, invalid IDs) and deduplication merge log | `tests/test_retrieval_paging.py` (2 tests) |
 | Frontend: protocol editor, workflow stepper, cancel / re-run, methodology + data-source sections, audit view, PDF print page | TypeScript, lint and production build pass; **live browser check pending migration 002** |
 
-Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for the deployed `main` code).
+Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for the deployed `main` code). **Not yet applied** to the Supabase project as of this update.
+
+## Evidence integrity (branch `phase-1`)
+
+| Requirement | Implementation | Verified by |
+| --- | --- | --- |
+| Provenance on every record | `Provenance` (API URL, payload SHA-256, parser version) set only in parsers; stored in Supabase metadata | `test_every_parsed_record_carries_provenance`, `test_llm_output_cannot_create_evidence_records` |
+| Reject malformed / untraceable records | `services/record_checks.py` in the validation agent | `test_validation_rejects_malformed_and_untraceable_records`, `test_malformed_source_items_are_skipped_not_guessed` |
+| Structured claims | `ClaimDraft` → `Statement` with type, citations, limitations, status, per-citation verdicts | all `test_evidence_integrity.py` |
+| Citation existence + session ownership | `agents/verification.py` pass 1 (validated records ∩ persisted for the session) | fabricated ID, invalid citation, cross-session tests |
+| Semantic support, separate from existence | Separate LLM call; irrelevant citations dropped; unsupported/contradicted removed | irrelevant, contradicted, partially supported, interpretation-relabel, outage tests |
+| Numbers, prices, efficacy-from-registry, approval | Deterministic rules | invented count, missing outcomes, missing prices, approval vs max phase, years-from-dates tests |
+| Publication cannot bypass validation | New LangGraph node + `ensure_publishable` in both repositories | `test_repositories_refuse_unverified_reports`, `test_workflow_cannot_publish_without_verification_node` |
+
+**Live run (real model and sources, in-memory storage, 2026-11-23):** protocol drafted in 14 s; after approval the run took 149 s (synthesis 69 s, verification 30 s, ChEMBL 40 s). 85 records; 49 claims drafted, 47 published (28 supported, 12 partially supported, 7 hypotheses/gaps), 2 removed: one efficacy claim resting only on a trial registration (correct) and one false positive where a year in a source date was not matched. That bug is fixed and covered by `test_years_from_source_dates_are_accepted`.
+
+**Known limitations:** the support check is itself an LLM judgement (strictly instructed, separate call, auditable) and can err; number checks confirm a number appears in a cited source, not that it is used in the same sense; runs are now about 2.5 minutes, so lower the per-source limit for live demos if time matters.
 
 ## New API
 - `GET /api/library`: the signed-in user's evidence across all sessions, deduplicated by record ID, each with the sessions it came from (`tests/test_api_research.py::test_library_merges_users_evidence_and_is_private`).

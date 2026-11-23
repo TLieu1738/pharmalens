@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { EVIDENCE_TYPE_LABELS, SOURCE_LABELS, formatDate } from '@/lib/labels'
 import { DataSourcesTable, Methodology, ProtocolSummary } from '@/components/research/RunMethodology'
 import type { SessionDetail, Statement } from '@/types/research'
@@ -23,24 +23,47 @@ function Citations({ ids, numbers }: { ids: string[]; numbers: Map<string, numbe
   )
 }
 
+const KIND_BADGES: Partial<Record<Statement['kind'], { label: string; tone: BadgeTone }>> = {
+  clinical_outcome: { label: 'Clinical outcome', tone: 'accent' },
+  comparative_analysis: { label: 'Comparison', tone: 'accent' },
+  interpretation: { label: 'Interpretation', tone: 'neutral' },
+  hypothesis: { label: 'Hypothesis', tone: 'warn' },
+  gap: { label: 'Open question', tone: 'navy' },
+}
+
+const STATUS_BADGES: Partial<Record<NonNullable<Statement['validation_status']>, { label: string; tone: BadgeTone }>> = {
+  partially_supported: { label: 'Partially supported', tone: 'warn' },
+  not_verified: { label: 'Not verified', tone: 'danger' },
+}
+
 function StatementItem({ st, numbers }: { st: Statement; numbers: Map<string, number> }) {
+  const kind = KIND_BADGES[st.kind]
+  const status = st.validation_status ? STATUS_BADGES[st.validation_status] : undefined
+  const notes = [...(st.validation_notes ?? [])]
   return (
     <li className="flex gap-2 text-[14px] leading-relaxed text-slate-800">
       <span className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-slate-400" aria-hidden="true" />
-      <p>
-        {st.kind === 'hypothesis' && (
-          <Badge tone="warn" className="mr-1.5 align-[1px]">
-            Hypothesis
-          </Badge>
+      <div>
+        <p>
+          {kind && (
+            <Badge tone={kind.tone} className="mr-1.5 align-[1px]">
+              {kind.label}
+            </Badge>
+          )}
+          {status && (
+            <Badge tone={status.tone} className="mr-1.5 align-[1px]">
+              <span title={notes.join(' ') || undefined}>{status.label}</span>
+            </Badge>
+          )}
+          {st.text}
+          <Citations ids={st.citations} numbers={numbers} />
+        </p>
+        {((st.limitations?.length ?? 0) > 0 || (status && notes.length > 0)) && (
+          <p className="mt-0.5 text-xs italic text-slate-500">
+            {[...(status ? notes : []), ...(st.limitations ?? [])].join(' ')}
+          </p>
         )}
-        {st.kind === 'gap' && (
-          <Badge tone="navy" className="mr-1.5 align-[1px]">
-            Open question
-          </Badge>
-        )}
-        {st.text}
-        <Citations ids={st.citations} numbers={numbers} />
-      </p>
+      </div>
     </li>
   )
 }
@@ -70,6 +93,18 @@ export function ReportView({ session, numbers }: { session: SessionDetail; numbe
             ))}
           </ul>
         </section>
+      )}
+
+      {!report.integrity.validated ? (
+        <p className="-mt-4 text-xs text-amber-800">
+          This report predates claim verification: its citations were checked to exist, but numbers and support were not verified.
+        </p>
+      ) : (
+      <p className="-mt-4 text-xs text-slate-500">
+        Every finding below passed claim verification: its citations exist in this session's evidence, its numbers appear in the cited
+        sources, and {report.integrity.semantic_check === 'completed' ? 'a separate check confirmed the cited records support it' : 'its support could not be independently checked (marked “Not verified”)'}.
+        Labels mark clinical outcomes, comparisons, interpretations, hypotheses and open questions.
+      </p>
       )}
 
       <section>

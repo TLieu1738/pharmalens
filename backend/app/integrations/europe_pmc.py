@@ -12,6 +12,7 @@ from app.integrations._parsing import clean_text, date_from_text, truncate
 from app.integrations.http import SourceError, SourceHttpClient
 from app.integrations.literature_types import classify_publication
 from app.integrations.paging import PAGE_SIZE, SearchPage, as_int
+from app.integrations.provenance import make_provenance
 from app.models.evidence import EvidenceCategory, EvidenceRecord, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,11 @@ def _parse_result(item: dict[str, Any]) -> EvidenceRecord | None:
         title=title,
         summary=truncate(clean_text(item.get("abstractText"))),
         source_url=f"https://europepmc.org/article/{source_db}/{ext_id}",
+        provenance=make_provenance(
+            "europe_pmc",
+            f"{SEARCH_URL}?query=EXT_ID:{ext_id}%20AND%20SRC:{source_db}&format=json&resultType=core",
+            item,
+        ),
         publication_date=date_from_text(item.get("firstPublicationDate"))
         or date_from_text(item.get("pubYear")),
         identifiers=Identifiers(
