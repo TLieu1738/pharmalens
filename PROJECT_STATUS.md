@@ -73,7 +73,7 @@ Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for 
 
 **Live run (real model and sources, in-memory storage, 2026-11-23):** protocol drafted in 14 s; after approval the run took 149 s (synthesis 69 s, verification 30 s, ChEMBL 40 s). 85 records; 49 claims drafted, 47 published (28 supported, 12 partially supported, 7 hypotheses/gaps), 2 removed: one efficacy claim resting only on a trial registration (correct) and one false positive where a year in a source date was not matched. That bug is fixed and covered by `test_years_from_source_dates_are_accepted`.
 
-**Known limitations:** the support check is itself an LLM judgement (strictly instructed, separate call, auditable) and can err; number checks confirm a number appears in a cited source, not that it is used in the same sense; runs are now about 2.5 minutes, so lower the per-source limit for live demos if time matters.
+**Known limitations:** the support check is itself an LLM judgement (strictly instructed, separate call, auditable) and can err; number checks confirm a number appears in a cited source, not that it is used in the same sense; runs take about 2.5 minutes (142 s at the default of 50 per source), so lower the per-source limit for live demos if time matters.
 
 ## Phase 2 (branch `phase-2`)
 
@@ -86,7 +86,9 @@ Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for 
 | CORS now allows `PUT` (protocol "Save draft" was blocked in browsers on `phase-1`) | Live preflight returned 200 with `PUT` |
 | Frontend: Knowledge Graph, Drug Pipeline, trial comparison/timeline/distributions, PubChem and target panels on Drug Intelligence | TypeScript, lint, production build; headless Chrome against the live local API with a temporary user (deleted): no console errors |
 
-**Test suite:** 123 passed on `phase-2`.
+**Test suite:** 124 passed on `phase-2`.
+
+**More data per run (2026-11-23):** default cap raised from 20 to 50 per source; the synthesis prompt holds up to 150 records chosen round-robin by category (`select_for_prompt`, tested) so literature cannot crowd out trials, targets or compounds; overview source cards show library counts plus the latest run's taken-vs-matching counts. Live run against Supabase with all seven sources up: 142 s, 243 records (PubMed 45, Europe PMC 45, OpenAlex 46, ClinicalTrials.gov 50, Open Targets 50, ChEMBL 6, PubChem 1), 49 claims published, graph 205 entities / 277 links.
 
 **Live compound path (2026-11-23, after ChEMBL recovered):** compound and target agents against live ChEMBL,
 PubChem and Open Targets for donepezil, lecanemab and memantine in Alzheimer disease: 3 exact ChEMBL matches; PubChem
@@ -105,7 +107,7 @@ form, so donepezil and memantine had none. Fixed by querying `parent_molecule_ch
 ## Known limitations
 - On `main` (deployed), background execution is an in-process task and interrupted sessions are marked failed; `phase-1`/`phase-2` use the lease-based job queue instead.
 - Without Supabase, storage is in-memory (lost on restart).
-- Retrieval takes the top-ranked results per source (protocol cap, default 20) — not a systematic review.
+- Retrieval takes the top-ranked results per source (protocol cap, default 50) — not a systematic review.
 - Contradiction detection relies on the synthesis agent reading abstracts; it is not a formal meta-analysis.
 - OpenAlex without an API key shares a small daily budget per IP address; set `OPENALEX_API_KEY` (free) for reliable use.
 - Graph compound ↔ trial links need an exact name or synonym match; drugs registered under other names are not linked. Paper ↔ target links are not drawn.

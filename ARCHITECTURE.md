@@ -86,11 +86,11 @@ lives in the existing Postgres table rather than Redis/Celery.
 
 ## Retrieval coverage
 
-- Per-source caps come from the approved protocol (`max_results_per_source`, 5–100, default 20), split evenly
+- Per-source caps come from the approved protocol (`max_results_per_source`, 5–100, default 50), split evenly
   across the protocol's literature queries.
 - PubMed pages with `retstart`, Europe PMC with `cursorMark`, ClinicalTrials.gov with `pageToken` (50 per page).
 - Each query records the source's own count of matching records, the cap, records returned and pages read. When
-  the cap is below the matching total, a warning says so in the run ("took the top 20 of 3,412…").
+  the cap is below the matching total, a warning says so in the run ("took the top 17 of 33,287…"); the overview shows the latest run's taken-vs-matching count per source.
 - Date ranges apply to publication year and trial start date; preprints can be excluded at the source.
 
 ## Evidence integrity

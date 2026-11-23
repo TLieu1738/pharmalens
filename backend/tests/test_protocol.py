@@ -20,7 +20,7 @@ def test_research_waits_for_approval_with_a_full_protocol(research_client: TestC
     sid, body = _drafted(research_client)
     plan = body["research_plan"]
     assert plan["objective"] and plan["key_questions"] and plan["inclusion_criteria"]
-    assert plan["max_results_per_source"] == 20
+    assert plan["max_results_per_source"] == 50
     agents = {a["agent_name"]: a["status"] for a in body["agents"]}
     assert agents["research_planner"] == "completed"
     assert agents["literature_agent"] == "pending"  # nothing retrieved before approval

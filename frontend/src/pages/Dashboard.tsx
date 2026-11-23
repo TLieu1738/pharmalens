@@ -9,8 +9,10 @@ import { Panel } from '@/components/ui/Panel'
 import { StatCard, StatGrid } from '@/components/ui/StatCard'
 import { invalidateLibrary, useLibrary } from '@/hooks/useLibrary'
 import { useMySessions } from '@/hooks/useMySessions'
+import { retrievalOutcomes } from '@/lib/evidence'
 import { SOURCE_LABELS, formatDate } from '@/lib/labels'
 import { rememberSession } from '@/lib/recentSessions'
+import { cn } from '@/lib/utils'
 import { api, ApiError } from '@/services/api'
 import type { SessionDetail, SourceName } from '@/types/research'
 
@@ -41,6 +43,28 @@ function useRecentInsights(sessionIds: string[]) {
   return key ? insights : []
 }
 
+interface SourceCoverage {
+  retrieved: number
+  matching: number | null // source-reported matches, summed across queries; null if the source gives no count
+  queries: number
+  failed: boolean
+}
+
+/** Per-source coverage of one completed run, from the searches each agent recorded. */
+function coverageBySource(session: SessionDetail | undefined): Map<string, SourceCoverage> {
+  const out = new Map<string, SourceCoverage>()
+  if (!session) return out
+  for (const o of retrievalOutcomes(session)) {
+    const c = out.get(o.source) ?? { retrieved: 0, matching: null, queries: 0, failed: true }
+    c.queries += 1
+    c.retrieved += o.record_count
+    c.failed = c.failed && !o.ok
+    if (typeof o.total_available === 'number') c.matching = (c.matching ?? 0) + o.total_available
+    out.set(o.source, c)
+  }
+  return out
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
@@ -58,6 +82,7 @@ export default function Dashboard() {
 
   const completedIds = (sessions ?? []).filter((s) => s.status === 'completed').slice(0, 2).map((s) => s.session_id)
   const insights = useRecentInsights(completedIds)
+  const latest = coverageBySource(insights?.[0])
 
   const start = async (question: string) => {
     setSubmitting(true)
@@ -138,18 +163,37 @@ export default function Dashboard() {
       </Panel>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <Panel title="Data sources" actions={<span className="text-xs text-slate-500">Public APIs · queried at request time</span>}>
+        <Panel
+          title="Data sources"
+          subtitle="Records in your library, and what your latest run took versus what matched at each source"
+          actions={<span className="text-xs text-slate-500">Public APIs · queried at request time</span>}
+        >
           <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-            {SOURCES.map((s) => (
-              <li key={s.id}>
-                <p className="text-sm font-medium text-ink-900">{SOURCE_LABELS[s.id]}</p>
-                <p className="text-xs text-slate-500">{s.detail}</p>
-                <p className="mt-1.5 inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                  Live · {records ? perSource(s.id) : '—'} records
-                </p>
-              </li>
-            ))}
+            {SOURCES.map((s) => {
+              const run = latest.get(s.id)
+              return (
+                <li key={s.id}>
+                  <p className="text-sm font-medium text-ink-900">{SOURCE_LABELS[s.id]}</p>
+                  <p className="text-xs text-slate-500">{s.detail}</p>
+                  <p className="mt-1.5 inline-flex items-center gap-1.5 rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                    Live · {records ? perSource(s.id) : '—'} in your library
+                  </p>
+                  {run && (
+                    <p
+                      className={cn('mt-1 text-[11px]', run.failed ? 'text-rose-700' : 'text-slate-500')}
+                      title={run.queries > 1 ? 'Matching counts are added across queries, so records matched by more than one query are counted more than once.' : undefined}
+                    >
+                      {run.failed
+                        ? 'Latest run: source unavailable'
+                        : run.matching !== null
+                          ? `Latest run: ${run.retrieved.toLocaleString()} of ${run.matching.toLocaleString()} matching${run.queries > 1 ? ` · ${run.queries} queries` : ''}`
+                          : `Latest run: ${run.retrieved.toLocaleString()} retrieved`}
+                    </p>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </Panel>
 

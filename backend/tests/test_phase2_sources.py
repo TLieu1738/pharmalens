@@ -5,6 +5,7 @@ import copy
 import httpx
 import pytest
 
+from app.agents.synthesis import select_for_prompt
 from app.integrations.chembl import parse_target, search_compounds
 from app.integrations.http import SourceError
 from app.integrations.openalex import abstract_from_index, build_filter, parse_openalex, search_openalex_paged
@@ -202,3 +203,25 @@ def test_new_sources_reject_malformed_records() -> None:
     assert any("not a valid openalex identifier" in p for p in record_problems(bad_id))
     wrong_host = oa.model_copy(update={"source_url": "https://example.com/W4390199458"})
     assert any("source URL" in p for p in record_problems(wrong_host))
+
+
+# ------------------------------------------------------------------------------------ prompt record selection
+def test_large_literature_haul_cannot_crowd_out_other_evidence() -> None:
+    """With more records than the prompt holds, every category is represented, in each category's own order."""
+    papers = [
+        chembl_record(f"CHEMBL{i}").model_copy(update={"category": EvidenceCategory.LITERATURE})
+        for i in range(200)
+    ]
+    trials = [
+        chembl_record(f"CHEMBL{i}").model_copy(update={"category": EvidenceCategory.CLINICAL_TRIAL})
+        for i in range(1000, 1010)
+    ]
+    compounds = [chembl_record(f"CHEMBL{i}") for i in range(2000, 2003)]
+    chosen = select_for_prompt(papers + trials + compounds, limit=50)
+    assert len(chosen) == 50
+    assert [r for r in chosen if r.category == EvidenceCategory.CLINICAL_TRIAL] == trials  # all 10 kept
+    assert [r for r in chosen if r.category == EvidenceCategory.COMPOUND] == compounds
+    assert [r for r in chosen if r.category == EvidenceCategory.LITERATURE] == papers[
+        :37
+    ]  # top-ranked papers fill the rest
+    assert select_for_prompt(trials, limit=50) == trials

@@ -62,7 +62,7 @@ class ResearchRequest(BaseModel):
         return value
 
 
-DEFAULT_RESULTS_PER_SOURCE = 20
+DEFAULT_RESULTS_PER_SOURCE = 50
 MAX_RESULTS_PER_SOURCE = 100
 _TERM_MAX = 200
 

@@ -14,7 +14,30 @@ from app.models.evidence import EvidenceRecord
 from app.models.report import SynthesisOutput
 from app.models.research import ResearchPlan
 
-MAX_RECORDS_IN_PROMPT = 120
+MAX_RECORDS_IN_PROMPT = 150
+
+
+def select_for_prompt(
+    records: list[EvidenceRecord], limit: int = MAX_RECORDS_IN_PROMPT
+) -> list[EvidenceRecord]:
+    """Choose which records the model sees when there are more than `limit`.
+
+    Takes records round-robin across categories (literature, trials, targets, compounds), keeping each category's
+    source ranking, so a large literature haul cannot crowd trials, targets or compounds out of the prompt.
+    """
+    if len(records) <= limit:
+        return list(records)
+    queues: dict[str, list[EvidenceRecord]] = {}
+    for record in records:
+        queues.setdefault(record.category.value, []).append(record)
+    chosen: list[EvidenceRecord] = []
+    while len(chosen) < limit:
+        for queue in queues.values():
+            if queue and len(chosen) < limit:
+                chosen.append(queue.pop(0))
+    return chosen
+
+
 PROTOCOL_FIELDS = {
     "disease_area",
     "biological_targets",
@@ -150,7 +173,7 @@ def _record_digest(record: EvidenceRecord) -> dict[str, Any]:
 def build_prompt(
     question: str, plan: ResearchPlan, records: list[EvidenceRecord], profile: dict[str, Any]
 ) -> str:
-    digests = [_record_digest(r) for r in records[:MAX_RECORDS_IN_PROMPT]]
+    digests = [_record_digest(r) for r in select_for_prompt(records)]
     return (
         f"<research_question>\n{question}\n</research_question>\n\n"
         f"<protocol>\n{plan.model_dump_json(include=PROTOCOL_FIELDS)}\n</protocol>\n\n"
