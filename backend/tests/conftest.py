@@ -45,7 +45,11 @@ def client(settings: Settings) -> Iterator[TestClient]:
 def research_client() -> Iterator[TestClient]:
     """App wired with a fake LLM, mocked sources, in-memory storage and fake auth."""
     settings = Settings(
-        _env_file=None, environment="test", anon_sessions_per_hour=2, max_concurrent_research=5
+        _env_file=None,
+        environment="test",
+        anon_sessions_per_hour=2,
+        max_concurrent_research=5,
+        job_poll_seconds=0.05,
     )
     app = create_app(
         settings=settings, repo=InMemorySessionRepository(), llm=FakeLLM(), http=mock_http(source_router())

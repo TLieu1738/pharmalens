@@ -1,8 +1,10 @@
-"""LangGraph orchestration of the PharmaLens agents.
+"""LangGraph orchestration of the PharmaLens agents, in two graphs separated by user approval.
 
-    START → planner ─┬─> literature ───────────────┐
-                     ├─> clinical ──> compounds ───┼─> validation → synthesis → END
-                     └─> targets ──────────────────┘
+    Planning graph:   START → planner → END                      (then the user reviews the protocol)
+
+    Execution graph:  START ─┬─> literature ───────────────┐
+                             ├─> clinical ──> compounds ───┼─> validation → synthesis → END
+                             └─> targets ──────────────────┘
 
 Literature, clinical and target retrieval run in parallel. The compound agent waits for the clinical agent so
 it can look up investigational products named in real trial registrations. A failure in one retrieval agent
@@ -33,7 +35,7 @@ from app.graph.progress import NullReporter, ProgressReporter
 from app.graph.state import ResearchState
 from app.integrations.http import SourceHttpClient
 from app.models.agents import AgentExecution, AgentName, ExecutionStatus
-from app.models.research import SessionStatus
+from app.models.research import ResearchPlan, SessionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,8 @@ class WorkflowDeps:
     model_name: str
     reporter: ProgressReporter = NullReporter()  # type: ignore[assignment]
     ncbi_api_key: str | None = None
+    # Checked before each agent starts; returning True stops the run (user cancelled the job).
+    should_stop: Callable[[], Awaitable[bool]] | None = None
 
 
 def _tracked(
@@ -61,6 +65,12 @@ def _tracked(
     """Wrap a node: time it, publish running/completed/failed states, and capture errors in state."""
 
     async def node(state: ResearchState) -> dict[str, Any]:
+        if state.get("cancelled") or (deps.should_stop and await deps.should_stop()):
+            skipped = AgentExecution(
+                agent_name=agent, status=ExecutionStatus.SKIPPED, message="Run cancelled"
+            )
+            await deps.reporter.agent_updated(skipped)
+            return {"cancelled": True, "agent_statuses": {agent.value: skipped}}
         execution = AgentExecution(
             agent_name=agent, status=ExecutionStatus.RUNNING, started_at=datetime.now(UTC)
         )
@@ -109,13 +119,12 @@ def _apply_retrieval(execution: AgentExecution, result: RetrievalResult) -> dict
     return {"warnings": warnings, "failed_sources": failed}
 
 
-def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns a compiled LangGraph
+def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns (planning, execution) compiled graphs
     async def planner(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:
         await deps.reporter.status_changed(SessionStatus.PLANNING)
         plan = await plan_research(deps.llm, state["research_question"])
         ex.message = plan.rationale or f"Query: {plan.literature_query}"
         await deps.reporter.plan_ready(plan)
-        await deps.reporter.status_changed(SessionStatus.RESEARCHING)
         return {"research_plan": plan}
 
     async def literature(state: ResearchState, ex: AgentExecution) -> dict[str, Any]:
@@ -183,40 +192,68 @@ def build_workflow(deps: WorkflowDeps):  # noqa: ANN201 - returns a compiled Lan
             )
         return {"report": report}
 
-    def after_planner(state: ResearchState) -> list[str] | str:
+    def fan_out(state: ResearchState) -> list[str] | str:
         return ["literature", "clinical", "targets"] if state.get("research_plan") else END
 
     def after_validation(state: ResearchState) -> str:
-        return "synthesis" if state.get("validated_evidence") else END
+        return "synthesis" if state.get("validated_evidence") and not state.get("cancelled") else END
 
-    graph = StateGraph(ResearchState)
-    graph.add_node("planner", _tracked(AgentName.PLANNER, deps, planner))
-    graph.add_node("literature", _tracked(AgentName.LITERATURE, deps, literature))
-    graph.add_node("clinical", _tracked(AgentName.CLINICAL, deps, clinical))
-    graph.add_node("targets", _tracked(AgentName.TARGETS, deps, targets))
-    graph.add_node("compounds", _tracked(AgentName.COMPOUNDS, deps, compounds))
-    graph.add_node("validation", _tracked(AgentName.VALIDATION, deps, validation))
-    graph.add_node("synthesis", _tracked(AgentName.SYNTHESIS, deps, synthesis))
+    planning = StateGraph(ResearchState)
+    planning.add_node("planner", _tracked(AgentName.PLANNER, deps, planner))
+    planning.add_edge(START, "planner")
+    planning.add_edge("planner", END)
 
-    graph.add_edge(START, "planner")
-    graph.add_conditional_edges("planner", after_planner, ["literature", "clinical", "targets", END])
-    graph.add_edge("clinical", "compounds")
-    graph.add_edge(["literature", "targets", "compounds"], "validation")
-    graph.add_conditional_edges("validation", after_validation, ["synthesis", END])
-    graph.add_edge("synthesis", END)
-    return graph.compile()
+    execution = StateGraph(ResearchState)
+    execution.add_node("literature", _tracked(AgentName.LITERATURE, deps, literature))
+    execution.add_node("clinical", _tracked(AgentName.CLINICAL, deps, clinical))
+    execution.add_node("targets", _tracked(AgentName.TARGETS, deps, targets))
+    execution.add_node("compounds", _tracked(AgentName.COMPOUNDS, deps, compounds))
+    execution.add_node("validation", _tracked(AgentName.VALIDATION, deps, validation))
+    execution.add_node("synthesis", _tracked(AgentName.SYNTHESIS, deps, synthesis))
+    execution.add_conditional_edges(START, fan_out, ["literature", "clinical", "targets", END])
+    execution.add_edge("clinical", "compounds")
+    execution.add_edge(["literature", "targets", "compounds"], "validation")
+    execution.add_conditional_edges("validation", after_validation, ["synthesis", END])
+    execution.add_edge("synthesis", END)
+    return planning.compile(), execution.compile()
 
 
-async def run_research(deps: WorkflowDeps, session_id: str, question: str) -> ResearchState:
-    workflow = build_workflow(deps)
-    initial: ResearchState = {
+def _initial(session_id: str, question: str, plan: ResearchPlan | None) -> ResearchState:
+    return {
         "session_id": session_id,
         "research_question": question,
-        "research_plan": None,
+        "research_plan": plan,
         "agent_statuses": {},
         "errors": [],
         "warnings": [],
         "failed_sources": [],
         "report": None,
+        "cancelled": False,
     }
-    return await workflow.ainvoke(initial)
+
+
+async def run_planning(deps: WorkflowDeps, session_id: str, question: str) -> ResearchState:
+    """Draft the research protocol only. The user reviews and approves it before execution."""
+    planning, _ = build_workflow(deps)
+    return await planning.ainvoke(_initial(session_id, question, None))
+
+
+async def run_execution(
+    deps: WorkflowDeps, session_id: str, question: str, plan: ResearchPlan
+) -> ResearchState:
+    """Retrieve, validate and synthesise using an approved protocol."""
+    _, execution = build_workflow(deps)
+    await deps.reporter.status_changed(SessionStatus.RESEARCHING)
+    return await execution.ainvoke(_initial(session_id, question, plan))
+
+
+async def run_research(deps: WorkflowDeps, session_id: str, question: str) -> ResearchState:
+    """Planning then execution with the plan as drafted (no review step). Used by tests and scripts."""
+    planned = await run_planning(deps, session_id, question)
+    plan = planned.get("research_plan")
+    if plan is None:
+        return planned
+    executed = await run_execution(deps, session_id, question, plan)
+    executed["agent_statuses"] = {**planned.get("agent_statuses", {}), **executed.get("agent_statuses", {})}
+    executed["errors"] = [*planned.get("errors", []), *executed.get("errors", [])]
+    return executed

@@ -11,6 +11,7 @@ from typing import Any
 
 from app.integrations._parsing import clean_text, date_from_text, truncate
 from app.integrations.http import SourceError, SourceHttpClient
+from app.integrations.paging import PAGE_SIZE, SearchPage, as_int
 from app.models.evidence import EvidenceCategory, EvidenceRecord, EvidenceType, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -29,17 +30,61 @@ async def search_clinical_trials(
     term: str | None = None,
     max_results: int = 20,
 ) -> list[EvidenceRecord]:
+    page = await search_clinical_trials_paged(
+        http, condition=condition, intervention=intervention, term=term, max_results=max_results
+    )
+    return page.records
+
+
+async def search_clinical_trials_paged(
+    http: SourceHttpClient,
+    *,
+    condition: str | None,
+    intervention: str | None = None,
+    term: str | None = None,
+    max_results: int = 20,
+    start_from: int | None = None,
+    start_to: int | None = None,
+    page_size: int = PAGE_SIZE,
+) -> SearchPage:
+    """Relevance-ranked study search, paged with `pageToken`. Optional filter on study start year."""
+    described = "; ".join(
+        f"{k}: {v}"
+        for k, v in (("condition", condition), ("intervention", intervention), ("terms", term))
+        if v
+    )
+    page = SearchPage(query=described)
     if not (condition or intervention or term):
-        return []
-    params: dict[str, str | int] = {"pageSize": max_results, "format": "json", "countTotal": "true"}
+        return page
+    base: dict[str, str | int] = {"format": "json", "countTotal": "true"}
     if condition:
-        params["query.cond"] = condition
+        base["query.cond"] = condition
     if intervention:
-        params["query.intr"] = intervention
+        base["query.intr"] = intervention
     if term:
-        params["query.term"] = term
-    data = await http.get_json(SOURCE, STUDIES_URL, params)
-    return parse_studies(data)
+        base["query.term"] = term
+    if start_from or start_to:
+        lo = f"{start_from}-01-01" if start_from else "MIN"
+        hi = f"{start_to}-12-31" if start_to else "MAX"
+        base["filter.advanced"] = f"AREA[StartDate]RANGE[{lo},{hi}]"
+        page.query += f"; start date {lo} to {hi}"
+    token: str | None = None
+    while len(page.records) < max_results:
+        size = min(page_size, max_results - len(page.records))
+        params = {**base, "pageSize": size}
+        if token:
+            params["pageToken"] = token
+        data = await http.get_json(SOURCE, STUDIES_URL, params)
+        batch = parse_studies(data)
+        page.pages += 1
+        if page.total_available is None:
+            page.total_available = as_int(data.get("totalCount"))
+        page.records.extend(batch)
+        token = data.get("nextPageToken")
+        if len(data["studies"]) < size or not token:
+            break
+    page.records = page.records[:max_results]
+    return page
 
 
 def parse_studies(data: Any) -> list[EvidenceRecord]:

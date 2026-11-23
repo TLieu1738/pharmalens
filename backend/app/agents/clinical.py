@@ -1,7 +1,7 @@
 """Clinical Intelligence agent: ClinicalTrials.gov (deterministic retrieval)."""
 
-from app.agents.base import RetrievalResult, run_source
-from app.integrations.clinical_trials import search_clinical_trials
+from app.agents.base import RetrievalResult, run_search
+from app.integrations.clinical_trials import search_clinical_trials_paged
 from app.integrations.http import SourceHttpClient
 from app.models.evidence import SourceName
 from app.models.research import ResearchPlan
@@ -26,7 +26,7 @@ def trial_search_terms(plan: ResearchPlan) -> list[str]:
 
 
 async def retrieve_trials(
-    http: SourceHttpClient, plan: ResearchPlan, *, max_results: int = 20
+    http: SourceHttpClient, plan: ResearchPlan, *, max_results: int | None = None
 ) -> RetrievalResult:
     result = RetrievalResult()
     if SourceName.CLINICAL_TRIALS not in plan.sources:
@@ -37,10 +37,20 @@ async def retrieve_trials(
     if not condition and not term:
         result.message = "No condition or intervention terms to search."
         return result
-    result.records = await run_source(
+    cap = max_results or plan.max_results_per_source
+    result.records = await run_search(
         result,
         SourceName.CLINICAL_TRIALS.value,
-        search_clinical_trials(http, condition=condition, term=term, max_results=max_results),
+        search_clinical_trials_paged(
+            http,
+            condition=condition,
+            term=term,
+            max_results=cap,
+            start_from=plan.date_from,
+            start_to=plan.date_to,
+        ),
+        query=f"condition: {condition or 'any'}; terms: {term or 'none'}",
+        requested=cap,
     )
     result.message = f"Retrieved {len(result.records)} registered studies (condition: {condition or 'any'}; terms: {term or 'none'})"
     return result

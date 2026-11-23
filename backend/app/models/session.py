@@ -24,3 +24,6 @@ class SessionDetail(BaseModel):
     error_message: str | None = None
     report: ResearchReport | None = None
     is_owner: bool = False
+    protocol_approved_at: datetime | None = None
+    attempts: int = 0
+    run_audit: dict[str, Any] | None = None

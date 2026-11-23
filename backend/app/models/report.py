@@ -35,18 +35,28 @@ class SynthesisOutput(BaseModel):
     clinical_trial_landscape: list[Statement]
     evidence_strengths: list[Statement]
     evidence_limitations: list[Statement]
+    conflicting_evidence: list[Statement] = Field(
+        description="Disagreements or inconclusive results between records; empty if none are detectable."
+    )
     research_gaps: list[Statement]
+    conclusions: list[Statement] = Field(
+        description="2-4 cautious conclusions that follow from the cited findings."
+    )
 
 
+# Order and titles of the AI-written sections. The research question, approved protocol, methodology and data
+# sources sections are generated deterministically from the session record, not by the model.
 REPORT_SECTIONS: list[tuple[str, str]] = [
     ("executive_summary", "Executive summary"),
-    ("biological_targets", "Relevant biological targets"),
-    ("compounds_and_interventions", "Compounds and interventions"),
-    ("literature_findings", "Relevant literature"),
-    ("clinical_trial_landscape", "Clinical-trial landscape"),
-    ("evidence_strengths", "Evidence strengths"),
-    ("evidence_limitations", "Limitations and contradictions"),
-    ("research_gaps", "Research gaps and open questions"),
+    ("literature_findings", "Key scientific findings"),
+    ("biological_targets", "Biological target analysis"),
+    ("compounds_and_interventions", "Compound and drug development analysis"),
+    ("clinical_trial_landscape", "Clinical trial analysis"),
+    ("evidence_strengths", "Evidence quality: strengths"),
+    ("evidence_limitations", "Evidence quality: limitations"),
+    ("conflicting_evidence", "Conflicting or inconclusive evidence"),
+    ("research_gaps", "Research gaps"),
+    ("conclusions", "Conclusions"),
 ]
 
 
@@ -67,6 +77,14 @@ class Reference(BaseModel):
     retrieved_at: datetime
 
 
+class RemovedStatement(BaseModel):
+    """A model statement dropped by the grounding check, kept for the audit trail."""
+
+    section: str
+    text: str
+    reason: str
+
+
 class ReportIntegrity(BaseModel):
     """Machine-checked facts about how well the report is grounded in retrieved evidence."""
 
@@ -74,6 +92,10 @@ class ReportIntegrity(BaseModel):
     statements_removed_unsupported: int
     citations_removed_invalid: int
     findings_with_citations: int
+    removed_statements: list[RemovedStatement] = Field(default_factory=list)
+    invalid_citations: list[str] = Field(default_factory=list)
+    records_provided: int | None = None  # validated records given to the synthesis model
+    records_available: int | None = None
 
 
 DISCLAIMER = (

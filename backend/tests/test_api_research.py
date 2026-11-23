@@ -7,14 +7,25 @@ from fastapi.testclient import TestClient
 QUESTION = "Investigate Alzheimer's disease research focusing on amyloid-beta and tau."
 
 
-def wait_for_terminal(client: TestClient, sid: str, headers: dict[str, str] | None = None) -> dict:
+def wait_for_status(
+    client: TestClient, sid: str, statuses: tuple[str, ...], headers: dict[str, str] | None = None
+) -> dict:
     deadline = time.time() + 10
     while time.time() < deadline:
         body = client.get(f"/api/sessions/{sid}", headers=headers or {}).json()
-        if body["status"] in ("completed", "failed"):
+        if body["status"] in statuses:
             return body
-        time.sleep(0.05)
-    raise AssertionError("session did not finish")
+        time.sleep(0.02)
+    raise AssertionError(f"session never reached {statuses}")
+
+
+def wait_for_terminal(client: TestClient, sid: str, headers: dict[str, str] | None = None) -> dict:
+    """Wait for the drafted protocol, approve it unchanged (as a user would), then wait for the result."""
+    body = wait_for_status(client, sid, ("awaiting_approval", "failed"), headers)
+    if body["status"] == "awaiting_approval":
+        assert client.post(f"/api/sessions/{sid}/approve", json={}, headers=headers or {}).status_code == 200
+        body = wait_for_status(client, sid, ("completed", "failed", "cancelled"), headers)
+    return body
 
 
 def test_validation_rejects_bad_questions(research_client: TestClient) -> None:

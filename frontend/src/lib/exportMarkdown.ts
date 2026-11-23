@@ -16,11 +16,41 @@ export function reportToMarkdown(session: SessionDetail): string {
     '',
     `_Evidence retrieved ${formatDate(session.created_at, true)}; report generated ${formatDate(report.generated_at, true)} (AI-generated synthesis)._`,
     '',
-    `## Research question and scope`,
+    `## Research question`,
     '',
-    report.scope,
+    report.research_question,
     '',
   ]
+  const plan = session.research_plan
+  if (plan) {
+    lines.push('## Approved research protocol', '')
+    lines.push(session.protocol_approved_at ? `_Approved ${formatDate(session.protocol_approved_at, true)}._` : '_Run with the drafted protocol._', '')
+    const item = (label: string, values: (string | null | undefined)[]) => {
+      const v = values.filter(Boolean)
+      if (v.length) lines.push(`- **${label}:** ${v.join('; ')}`)
+    }
+    item('Objective', [plan.objective])
+    item('Key questions', plan.key_questions ?? [])
+    item('Disease / condition', [plan.disease_area])
+    item('Literature queries', [plan.literature_query, ...(plan.additional_literature_queries ?? [])])
+    item('Sources', plan.sources.map((s) => SOURCE_LABELS[s]))
+    item('Date range', [plan.date_from || plan.date_to ? `${plan.date_from ?? 'any'}–${plan.date_to ?? 'present'}` : null])
+    item('Max records per source', [String(plan.max_results_per_source ?? '')])
+    item('Inclusion criteria', plan.inclusion_criteria ?? [])
+    item('Exclusion criteria', plan.exclusion_criteria ?? [])
+    item('Known limitations', plan.known_limitations ?? [])
+    lines.push('')
+  }
+  lines.push('## Methodology and scope', '', report.scope, '')
+  const outcomes = session.agents.filter((a) => a.agent_name !== 'research_planner').flatMap((a) => a.sources)
+  if (outcomes.length) {
+    lines.push('| Source | Query | Matching at source | Retrieved |', '| --- | --- | --- | --- |')
+    for (const o of outcomes) {
+      const name = SOURCE_LABELS[o.source as keyof typeof SOURCE_LABELS] ?? o.source
+      lines.push(`| ${name} | ${(o.query ?? '').replace(/\|/g, '/')} | ${o.total_available ?? 'n/r'} | ${o.ok ? o.record_count : 'failed'} |`)
+    }
+    lines.push('')
+  }
   for (const section of report.sections) {
     lines.push(`## ${section.title}`, '')
     if (!section.statements.length) lines.push('_No supported statements._')

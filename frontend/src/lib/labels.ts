@@ -29,13 +29,16 @@ export const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {
 }
 
 export const STATUS_LABELS: Record<SessionStatus, string> = {
-  pending: 'Queued',
-  planning: 'Planning',
+  pending: 'Queued for planning',
+  planning: 'Drafting protocol',
+  awaiting_approval: 'Awaiting your approval',
+  queued: 'Queued',
   researching: 'Retrieving evidence',
   validating: 'Validating evidence',
   synthesising: 'Writing report',
   completed: 'Completed',
   failed: 'Failed',
+  cancelled: 'Cancelled',
 }
 
 export const FLAG_LABELS: Record<string, string> = {

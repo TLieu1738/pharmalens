@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     anon_sessions_per_hour: int = Field(default=6, ge=0)
     max_concurrent_research: int = Field(default=3, ge=1)
+    # Durable job queue (research sessions double as job records; see services/research_service.py)
+    run_worker_in_api: bool = True  # false when a separate `python -m app.worker` process runs jobs
+    job_lease_seconds: int = Field(default=90, ge=10, le=600)
+    job_max_attempts: int = Field(default=2, ge=1, le=5)
+    job_poll_seconds: float = Field(default=2.0, gt=0, le=60)
 
     http_timeout_seconds: float = Field(default=20.0, gt=0, le=120)
 

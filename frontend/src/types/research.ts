@@ -3,11 +3,14 @@
 export type SessionStatus =
   | 'pending'
   | 'planning'
+  | 'awaiting_approval'
+  | 'queued'
   | 'researching'
   | 'validating'
   | 'synthesising'
   | 'completed'
   | 'failed'
+  | 'cancelled'
 
 export type AgentName =
   | 'research_planner'
@@ -36,6 +39,10 @@ export interface SourceOutcome {
   ok: boolean
   record_count: number
   error: string | null
+  query?: string | null
+  total_available?: number | null
+  requested?: number | null
+  pages?: number | null
 }
 
 export interface AgentExecution {
@@ -62,6 +69,18 @@ export interface ResearchPlan {
   clinical_intervention_terms: string[]
   sources: SourceName[]
   rationale: string
+  // Protocol fields (reviewed and approved by the user before retrieval runs)
+  objective: string
+  key_questions: string[]
+  additional_literature_queries: string[]
+  inclusion_criteria: string[]
+  exclusion_criteria: string[]
+  date_from: number | null
+  date_to: number | null
+  include_preprints: boolean
+  max_results_per_source: number
+  intended_outputs: string[]
+  known_limitations: string[]
 }
 
 export type StatementKind = 'finding' | 'hypothesis' | 'gap'
@@ -89,11 +108,42 @@ export interface Reference {
   retrieved_at: string
 }
 
+export interface RemovedStatement {
+  section: string
+  text: string
+  reason: string
+}
+
 export interface ReportIntegrity {
   statements_total: number
   statements_removed_unsupported: number
   citations_removed_invalid: number
   findings_with_citations: number
+  removed_statements?: RemovedStatement[]
+  invalid_citations?: string[]
+  records_provided?: number | null
+  records_available?: number | null
+}
+
+export interface RunAudit {
+  model: { id: string; planner_effort: string; synthesis_effort: string }
+  attempts: number
+  execution_started_at: string
+  execution_finished_at: string
+  limits: {
+    max_results_per_source: number
+    literature_queries: string[]
+    date_from: number | null
+    date_to: number | null
+    include_preprints: boolean
+  }
+  deduplication: {
+    records_retrieved: number
+    unique_records: number
+    duplicates_merged: number
+    merges: { kept: string; merged: string[] }[]
+  }
+  errors: string[]
 }
 
 export interface ResearchReport {
@@ -133,6 +183,9 @@ export interface SessionDetail {
   error_message: string | null
   report: ResearchReport | null
   is_owner: boolean
+  protocol_approved_at: string | null
+  attempts: number
+  run_audit: RunAudit | null
 }
 
 export interface SessionSummary {
@@ -142,6 +195,7 @@ export interface SessionSummary {
   demo_mode: boolean
   created_at: string
   completed_at: string | null
+  attempts?: number
 }
 
 export interface Identifiers {
@@ -174,7 +228,9 @@ export interface EvidenceRecord {
   also_found_in: SourceName[]
 }
 
-export const TERMINAL_STATUSES: SessionStatus[] = ['completed', 'failed']
+export const TERMINAL_STATUSES: SessionStatus[] = ['completed', 'failed', 'cancelled']
+/** Statuses where nothing changes until the user acts, so polling can pause. */
+export const IDLE_STATUSES: SessionStatus[] = [...TERMINAL_STATUSES, 'awaiting_approval']
 
 export interface SessionRef {
   session_id: string

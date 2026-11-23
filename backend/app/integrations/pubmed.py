@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from app.integrations._parsing import clean_text, date_from_text, normalise_date, truncate
 from app.integrations.http import SourceError, SourceHttpClient
 from app.integrations.literature_types import classify_publication
+from app.integrations.paging import PAGE_SIZE, SearchPage, as_int
 from app.models.evidence import EvidenceCategory, EvidenceRecord, Identifiers, SourceName
 
 logger = logging.getLogger(__name__)
@@ -23,37 +24,65 @@ SOURCE = SourceName.PUBMED.value
 async def search_pubmed(
     http: SourceHttpClient, query: str, *, max_results: int = 15, api_key: str | None = None
 ) -> list[EvidenceRecord]:
-    params: dict[str, str | int] = {
+    return (await search_pubmed_paged(http, query, max_results=max_results, api_key=api_key)).records
+
+
+async def search_pubmed_paged(
+    http: SourceHttpClient,
+    query: str,
+    *,
+    max_results: int = 15,
+    api_key: str | None = None,
+    date_from: int | None = None,
+    date_to: int | None = None,
+) -> SearchPage:
+    """ESearch (paged by `retstart`) for up to `max_results` PMIDs by relevance, then EFetch in batches."""
+    base: dict[str, str | int] = {
         "db": "pubmed",
         "term": query,
-        "retmax": max_results,
         "retmode": "json",
         "sort": "relevance",
         "tool": "pharmalens",
     }
     if api_key:
-        params["api_key"] = api_key
-    data = await http.get_json(SOURCE, f"{BASE_URL}/esearch.fcgi", params)
-    try:
-        ids: list[str] = data["esearchresult"]["idlist"]
-    except (KeyError, TypeError) as exc:
-        raise SourceError(SOURCE, "unexpected ESearch response shape") from exc
+        base["api_key"] = api_key
+    if date_from or date_to:
+        base.update({"datetype": "pdat", "mindate": str(date_from or 1800), "maxdate": str(date_to or 3000)})
+    page = SearchPage(query=query)
+    ids: list[str] = []
+    while len(ids) < max_results:
+        size = min(PAGE_SIZE, max_results - len(ids))
+        params = {**base, "retmax": size, "retstart": len(ids)}
+        data = await http.get_json(SOURCE, f"{BASE_URL}/esearch.fcgi", params)
+        try:
+            result = data["esearchresult"]
+            batch: list[str] = result["idlist"]
+        except (KeyError, TypeError) as exc:
+            raise SourceError(SOURCE, "unexpected ESearch response shape") from exc
+        page.pages += 1
+        page.total_available = as_int(result.get("count"))
+        ids.extend(i for i in batch if i not in ids)
+        if len(batch) < size or (page.total_available is not None and len(ids) >= page.total_available):
+            break
     if not ids:
-        return []
+        return page
 
-    fetch_params: dict[str, str | int] = {
-        "db": "pubmed",
-        "id": ",".join(ids),
-        "retmode": "xml",
-        "tool": "pharmalens",
-    }
-    if api_key:
-        fetch_params["api_key"] = api_key
-    xml_text = await http.get_text(SOURCE, f"{BASE_URL}/efetch.fcgi", fetch_params)
-    records = parse_pubmed_xml(xml_text)
+    for start in range(0, len(ids), PAGE_SIZE):
+        fetch_params: dict[str, str | int] = {
+            "db": "pubmed",
+            "id": ",".join(ids[start : start + PAGE_SIZE]),
+            "retmode": "xml",
+            "tool": "pharmalens",
+        }
+        if api_key:
+            fetch_params["api_key"] = api_key
+        page.records.extend(
+            parse_pubmed_xml(await http.get_text(SOURCE, f"{BASE_URL}/efetch.fcgi", fetch_params))
+        )
     # Preserve relevance order from ESearch
     order = {pmid: i for i, pmid in enumerate(ids)}
-    return sorted(records, key=lambda r: order.get(r.source_identifier, len(order)))
+    page.records.sort(key=lambda r: order.get(r.source_identifier, len(order)))
+    return page
 
 
 def parse_pubmed_xml(xml_text: str) -> list[EvidenceRecord]:

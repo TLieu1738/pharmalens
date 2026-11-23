@@ -1,5 +1,5 @@
 // Helpers for reading source-specific fields from evidence records. Values come from the source APIs only.
-import type { EvidenceRecord } from '@/types/research'
+import type { EvidenceRecord, SessionDetail, SourceOutcome } from '@/types/research'
 import { FLAG_LABELS, SERIOUS_FLAGS } from './labels'
 
 export function year(record: EvidenceRecord): number | null {
@@ -112,4 +112,9 @@ export function qualitySummary(r: EvidenceRecord): QualitySummary {
 
 export function mentions(text: string, name: string): boolean {
   return text.toLowerCase().includes(name.toLowerCase())
+}
+
+/** All source queries run by the retrieval agents, in pipeline order. */
+export function retrievalOutcomes(session: SessionDetail): SourceOutcome[] {
+  return session.agents.filter((a) => a.agent_name !== 'research_planner').flatMap((a) => a.sources)
 }

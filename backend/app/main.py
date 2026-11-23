@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -20,7 +21,7 @@ from app.logging_config import configure_logging
 from app.models.health import RootResponse
 from app.services.auth import SupabaseAuthVerifier
 from app.services.repository import InMemorySessionRepository, SessionRepository
-from app.services.research_service import ResearchService
+from app.services.research_service import JobRunner, ResearchService
 
 logger = logging.getLogger("pharmalens")
 
@@ -48,17 +49,19 @@ def create_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         source_http = http or SourceHttpClient(timeout=settings.http_timeout_seconds)
         repository = repo or build_repository(settings)
-        interrupted = await repository.fail_interrupted()
-        if interrupted:
-            logger.warning("marked_interrupted_sessions count=%d", interrupted)
+        research = ResearchService(settings, repository, source_http, llm)
         services = Services(
             settings=settings,
             repo=repository,
-            research=ResearchService(settings, repository, source_http, llm),
+            research=research,
             auth=SupabaseAuthVerifier(settings),
             http=source_http,
         )
         app.state.services = services
+        runner = (
+            JobRunner(settings, repository, source_http, research) if settings.run_worker_in_api else None
+        )
+        runner_task = asyncio.create_task(runner.run_forever(), name="job-runner") if runner else None
         logger.info(
             "startup environment=%s storage=%s cors_origins=%s",
             settings.environment,
@@ -66,7 +69,10 @@ def create_app(
             settings.cors_origins,
         )
         yield
-        await services.research.shutdown()
+        if runner and runner_task:
+            runner_task.cancel()
+            await asyncio.gather(runner_task, return_exceptions=True)
+            await runner.shutdown()
         await services.auth.aclose()
         if http is None:
             await source_http.aclose()

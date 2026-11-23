@@ -8,7 +8,7 @@ from app.models.research import ResearchPlan
 
 
 async def retrieve_targets(
-    http: SourceHttpClient, plan: ResearchPlan, *, max_results: int = 15
+    http: SourceHttpClient, plan: ResearchPlan, *, max_results: int | None = None
 ) -> RetrievalResult:
     result = RetrievalResult()
     if SourceName.OPEN_TARGETS not in plan.sources or not plan.disease_area:
@@ -20,7 +20,7 @@ async def retrieve_targets(
         disease_targets(
             http,
             plan.disease_area,
-            max_results=max_results,
+            max_results=min(max_results or plan.max_results_per_source, 50),
             focus_targets=plan.target_gene_symbols + plan.biological_targets,
         ),
     )

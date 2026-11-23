@@ -1,10 +1,8 @@
 import { AlertTriangle } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { EvidenceAssessment } from '@/components/evidence/EvidenceAssessment'
 import { EvidenceList } from '@/components/evidence/EvidenceList'
-import { AgentProgress } from '@/components/research/AgentProgress'
-import { PlanSummary } from '@/components/research/PlanSummary'
 import { ReportView } from '@/components/research/ReportView'
+import { RunAuditView } from '@/components/research/RunAuditView'
 import { SupportingSources } from '@/components/research/SupportingSources'
 import { Tabs } from '@/components/ui/Tabs'
 import { useEvidence } from '@/hooks/useEvidence'
@@ -48,14 +46,14 @@ export default function ResearchResults({ session }: { session: SessionDetail })
               items={[
                 { id: 'summary', label: 'Summary' },
                 { id: 'evidence', label: 'Evidence table', count: records?.length },
-                { id: 'trail', label: 'Research trail' },
+                { id: 'trail', label: 'Run details & audit' },
               ]}
               active={tab}
               onChange={setTab}
             />
           </div>
           <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="px-6 py-6">
-            {tab === 'summary' && <ReportView report={report} numbers={numbers} />}
+            {tab === 'summary' && <ReportView session={session} numbers={numbers} />}
 
             {tab === 'evidence' && (
               <div className="space-y-4">
@@ -85,30 +83,7 @@ export default function ResearchResults({ session }: { session: SessionDetail })
               </div>
             )}
 
-            {tab === 'trail' && (
-              <div className="space-y-8">
-                <section>
-                  <h3 className="text-sm font-semibold text-ink-900">1 · Research plan</h3>
-                  <div className="mt-3">{session.research_plan ? <PlanSummary plan={session.research_plan} /> : <p className="text-sm text-slate-500">Unavailable.</p>}</div>
-                </section>
-                <section>
-                  <h3 className="text-sm font-semibold text-ink-900">2 · Agent execution log</h3>
-                  <div className="mt-3">
-                    <AgentProgress agents={session.agents} />
-                  </div>
-                </section>
-                <section>
-                  <h3 className="text-sm font-semibold text-ink-900">3 · Evidence validation</h3>
-                  <div className="mt-3">
-                    {session.evidence_profile ? (
-                      <EvidenceAssessment profile={session.evidence_profile} integrity={report.integrity} warnings={session.warnings} />
-                    ) : (
-                      <p className="text-sm text-slate-500">No evidence profile recorded.</p>
-                    )}
-                  </div>
-                </section>
-              </div>
-            )}
+            {tab === 'trail' && <RunAuditView session={session} />}
           </div>
           <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-500">AI-assisted synthesis · Every finding links to a retrieved record · Validate cited sources before use</p>
         </section>

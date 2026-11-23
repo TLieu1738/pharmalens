@@ -8,6 +8,7 @@ import DrugIntelligence from '@/pages/DrugIntelligence'
 import EvidenceLibrary from '@/pages/EvidenceLibrary'
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage'
 import NotFound from '@/pages/NotFound'
+import PrintReport from '@/pages/PrintReport'
 import ResearchSession, { LatestResearch } from '@/pages/ResearchSession'
 import ResetPasswordPage from '@/pages/ResetPasswordPage'
 import SavedResearch from '@/pages/SavedResearch'
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
       <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route element={<RequireAuth />}>
+        <Route path="research/:sessionId/print" element={<PrintReport />} />
         <Route element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="research" element={<LatestResearch />} />

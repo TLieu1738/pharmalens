@@ -24,3 +24,17 @@ html {
 body {
   @apply bg-canvas text-slate-800;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm;
+  }
+  body {
+    background: white;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}

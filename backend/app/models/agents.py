@@ -39,10 +39,16 @@ class ExecutionStatus(StrEnum):
 
 
 class SourceOutcome(BaseModel):
+    """What one query against one source returned. Kept for the audit trail."""
+
     source: str
     ok: bool
     record_count: int = 0
     error: str | None = None
+    query: str | None = None
+    total_available: int | None = None  # matching records the source reports, when it reports a count
+    requested: int | None = None  # the cap applied from the protocol
+    pages: int | None = None
 
 
 class AgentExecution(BaseModel):

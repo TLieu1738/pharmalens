@@ -31,3 +31,4 @@ class ResearchState(TypedDict, total=False):
     errors: Annotated[list[str], operator.add]
     warnings: Annotated[list[str], operator.add]
     failed_sources: Annotated[list[str], operator.add]
+    cancelled: Annotated[bool, operator.or_]

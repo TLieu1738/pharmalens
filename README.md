@@ -18,20 +18,25 @@ structured briefing in which every claim cites a retrieved record.
 frontend/   React + TypeScript + Vite + Tailwind CSS
 backend/    FastAPI + Pydantic v2 + LangGraph + Anthropic SDK
 supabase/   SQL migrations (schema + RLS)
-docs/       Architecture and API design notes
+docs/       API design notes (architecture: ARCHITECTURE.md, plans: ROADMAP.md)
 ```
 
 ## How it works (short)
 
-1. **Research Planner** (LLM) turns the question into a validated search plan.
-2. **Literature**, **Clinical** and **Target** agents query PubMed + Europe PMC, ClinicalTrials.gov and Open Targets in
-   parallel; the **Compound** agent then looks up planned compounds and trial interventions in ChEMBL.
-3. **Evidence Validation** deduplicates by DOI/PMID/PMCID/NCT/ChEMBL/Ensembl and flags preprints, retractions,
+1. **Research Planner** (LLM) drafts a research protocol from the question: objective, key questions, search
+   terms, literature queries, sources, inclusion/exclusion criteria, date range, record limits and known limitations.
+2. **You review and approve it.** Every field is editable; nothing is searched until you approve.
+3. **Literature**, **Clinical** and **Target** agents query PubMed + Europe PMC (every protocol query, paged),
+   ClinicalTrials.gov and Open Targets in parallel; the **Compound** agent then looks up planned compounds and
+   trial interventions in ChEMBL. Each query records how many records matched at the source versus were taken.
+4. **Evidence Validation** deduplicates by DOI/PMID/PMCID/NCT/ChEMBL/Ensembl and flags preprints, retractions,
    stopped trials and missing metadata.
-4. **Research Synthesis** (LLM) writes a structured report; code then removes any citation that does not match a
-   retrieved record and any uncited "finding". References and URLs come from the records, never from the model.
+5. **Research Synthesis** (LLM) writes the report against the approved protocol; code then removes any citation
+   that does not match a retrieved record and any uncited "finding", and logs each removal for the audit view.
 
-All retrieval is deterministic Python; the LLM only plans and writes.
+All retrieval is deterministic Python; the LLM only plans and writes. Research runs as a durable job: a worker
+claims it from the database with a renewable lease, so a server restart re-queues it instead of losing it.
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
 
 ## Prerequisites
 
@@ -93,12 +98,14 @@ npm run build && npm run lint
 | `NCBI_API_KEY` | backend | no | Raises PubMed rate limit; works without it. |
 | `DEMO_MODE` | backend | no | `true` lets signed-out users run research (unlisted sessions, rate limited per IP). |
 | `ADDITIONAL_CORS_ORIGINS` | backend | no | Comma-separated extra origins (e.g. Vercel preview URL). |
+| `RUN_WORKER_IN_API` | backend | no | Default `true`: the API process runs research jobs. Set `false` when running `python -m app.worker` separately. |
+| `JOB_LEASE_SECONDS`, `JOB_MAX_ATTEMPTS`, `JOB_POLL_SECONDS` | backend | no | Job queue tuning (defaults 90, 2, 2.0). |
 | `VITE_API_BASE_URL` | frontend | yes | Backend URL. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | frontend | Phase 4+ | Public values only. |
 
 ## Supabase setup
 
-1. Create a project, then run `supabase/migrations/001_initial_schema.sql` in the SQL editor.
+1. Create a project, then run each file in `supabase/migrations/` in order (`001_…`, `002_…`) in the SQL editor.
 2. Authentication → Providers → Email: enabled. For a quick demo you may disable "Confirm email".
 3. Copy URL, anon key and service-role key into `backend/.env`; URL + anon key into `frontend/.env.local`.
 

@@ -27,6 +27,15 @@ PLAN = PlannerOutput(
     clinical_intervention_terms=["amyloid"],
     sources=list(SourceName),
     rationale="Search literature, trials, compounds and targets for amyloid and tau.",
+    objective="Summarise evidence on amyloid-beta and tau approaches in Alzheimer disease.",
+    key_questions=["Which compounds target amyloid-beta?", "What trials are registered?"],
+    additional_literature_queries=[],
+    inclusion_criteria=["Human studies and registered trials"],
+    exclusion_criteria=["Unrelated dementias"],
+    date_from=None,
+    date_to=None,
+    intended_outputs=["Cited evidence briefing"],
+    known_limitations=["Top-ranked records only"],
 )
 
 
@@ -51,7 +60,9 @@ def synthesis_output() -> SynthesisOutput:
         clinical_trial_landscape=[],
         evidence_strengths=[],
         evidence_limitations=[],
+        conflicting_evidence=[],
         research_gaps=[gap],
+        conclusions=[ok],
     )
 
 

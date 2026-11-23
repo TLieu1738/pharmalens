@@ -1,6 +1,8 @@
 # PharmaLens — Project Status
 
-_Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
+_Last updated: 2026-11-23. Interview demo: Tuesday 2026-11-24._
+
+> **Branch `phase-1`** holds the Phase 1 upgrade (protocol approval, durable jobs, paged retrieval, audit trail, richer reports). `main` is the deployed version. See the Phase 1 section below; it needs migration `002` before it can run against Supabase.
 
 ## Verified working
 | Area | How it was verified |
@@ -21,7 +23,7 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 
 | **Frontend redesign (2026-11-23)** | Sidebar workspace layout: Overview, Research Workspace, Evidence Library, Drug Intelligence, Clinical Trials, Saved Research. Rendered in headless Chrome against the local stack with a temporary user (deleted afterwards) after a real research run: all pages populated with real data, no console errors, mobile layout checked. Market Access & Costs deliberately not built (no real pricing source). |
 
-**Test suite:** 61 passed (`cd backend && .venv/bin/pytest`).
+**Test suite:** 81 passed on `phase-1` (61 on `main`) (`cd backend && .venv/bin/pytest`).
 
 ## Implemented but NOT yet verified
 - Supabase Auth sign-in UI and backend token verification against a real project.
@@ -44,6 +46,18 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 - Dashboard and Saved research list the signed-in account's sessions.
 - Local `.env` uses `DEMO_MODE=false`: the API returns 401 to signed-out research requests (verified with curl).
 - Verified 2026-11-23: account created in the browser, research run completed and saved with the user as owner, listed under Saved research.
+
+## Phase 1 (branch `phase-1`)
+
+| Feature | Verified by |
+| --- | --- |
+| Protocol drafted → edited → approved → executed; validation (limits, sources, dates); lock after approval; owner-only; cancel; re-run | `tests/test_protocol.py` (6 tests) |
+| Durable jobs: exclusive claims, lease renewal, crash recovery, bounded retries, cancellation not overwritten | `tests/test_jobs.py` (6 tests) — found and fixed a bug where a progress update could undo a cancellation |
+| Paging (PubMed retstart, Europe PMC cursor, CT.gov page token), date / preprint filters, multi-query literature, coverage counts and truncation warnings | `tests/test_retrieval_paging.py` (6 tests) |
+| Grounding audit (removed statements with reasons, invalid IDs) and deduplication merge log | `tests/test_retrieval_paging.py` (2 tests) |
+| Frontend: protocol editor, workflow stepper, cancel / re-run, methodology + data-source sections, audit view, PDF print page | TypeScript, lint and production build pass; **live browser check pending migration 002** |
+
+Migration `supabase/migrations/002_protocol_jobs_audit.sql` (additive; safe for the deployed `main` code).
 
 ## New API
 - `GET /api/library`: the signed-in user's evidence across all sessions, deduplicated by record ID, each with the sessions it came from (`tests/test_api_research.py::test_library_merges_users_evidence_and_is_private`).

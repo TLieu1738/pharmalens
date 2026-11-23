@@ -7,6 +7,7 @@ from collections.abc import Awaitable
 from dataclasses import dataclass, field
 
 from app.integrations.http import SourceError
+from app.integrations.paging import SearchPage
 from app.models.agents import SourceOutcome
 from app.models.evidence import EvidenceRecord
 
@@ -45,3 +46,39 @@ async def run_source(
         return []
     result.sources.append(SourceOutcome(source=source, ok=True, record_count=len(records)))
     return records
+
+
+async def run_search(
+    result: RetrievalResult, source: str, call: Awaitable[SearchPage], *, query: str, requested: int
+) -> list[EvidenceRecord]:
+    """Like `run_source` for paginated searches: also records the query, cap and coverage for the audit."""
+    try:
+        page = await call
+    except SourceError as exc:
+        logger.warning("source_failed source=%s error=%s", source, exc.message)
+        result.sources.append(
+            SourceOutcome(source=source, ok=False, error=exc.message, query=query, requested=requested)
+        )
+        return []
+    except Exception:
+        logger.exception("source_unexpected_error source=%s", source)
+        result.sources.append(
+            SourceOutcome(source=source, ok=False, error="unexpected error", query=query, requested=requested)
+        )
+        return []
+    result.sources.append(
+        SourceOutcome(
+            source=source,
+            ok=True,
+            record_count=len(page.records),
+            query=page.query or query,
+            total_available=page.total_available,
+            requested=requested,
+            pages=page.pages,
+        )
+    )
+    if page.truncated:
+        result.warnings.append(
+            f"{source}: took the top {len(page.records)} of {page.total_available:,} matching records for “{query}”."
+        )
+    return page.records

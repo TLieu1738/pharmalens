@@ -7,7 +7,7 @@ in the API enforces ownership before returning data (see `api/routes/sessions.py
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -16,9 +16,15 @@ from app.config import Settings
 from app.models.agents import AgentExecution
 from app.models.evidence import EvidenceRecord
 from app.models.report import ResearchReport
-from app.models.research import ResearchPlan, SessionStatus, SessionSummary
+from app.models.research import (
+    RUNNING_STATUSES,
+    TERMINAL_STATUSES,
+    ResearchPlan,
+    SessionStatus,
+    SessionSummary,
+)
 from app.models.session import SessionDetail
-from app.services.repository import ACTIVE_STATUSES, ordered_agents
+from app.services.repository import INTERRUPTED_MESSAGE, ClaimedJob, ordered_agents
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +86,17 @@ class SupabaseSessionRepository:
     async def _update_session(self, session_id: str, fields: dict[str, Any]) -> None:
         await self._req("PATCH", "/research_sessions", params={"id": f"eq.{session_id}"}, json=fields)
 
+    async def _patch_where(self, filters: dict[str, str], fields: dict[str, Any]) -> list[dict[str, Any]]:
+        """Conditional update: only rows matching `filters` change. Returns the rows that did."""
+        rows = await self._req(
+            "PATCH", "/research_sessions", params=filters, prefer="return=representation", json=fields
+        )
+        return rows or []
+
     # -- writes -------------------------------------------------------------------------------------------
-    async def create_session(self, question: str, user_id: str | None, demo_mode: bool) -> str:
+    async def create_session(
+        self, question: str, user_id: str | None, demo_mode: bool, plan: ResearchPlan | None = None
+    ) -> str:
         rows = await self._req(
             "POST",
             "/research_sessions",
@@ -90,13 +105,157 @@ class SupabaseSessionRepository:
                 "research_question": question,
                 "user_id": user_id,
                 "demo_mode": demo_mode,
-                "status": "pending",
+                "status": "awaiting_approval" if plan else "pending",
+                "research_plan": plan.model_dump(mode="json") if plan else None,
             },
         )
         return rows[0]["id"]
 
+    # -- jobs -------------------------------------------------------------------------------------------
+    async def claim_job(self, worker_id: str, lease_seconds: int) -> ClaimedJob | None:
+        now = _iso(datetime.now(UTC))
+        candidates = await self._req(
+            "GET",
+            "/research_sessions",
+            params={
+                "status": "in.(pending,queued)",
+                "or": f'(lease_expires_at.is.null,lease_expires_at.lt."{now}")',
+                "order": "created_at.asc",
+                "limit": "5",
+                "select": "id,status,attempts,research_question,research_plan",
+            },
+        )
+        for row in candidates or []:
+            phase = "plan" if row["status"] == "pending" else "execute"
+            attempts = int(row.get("attempts") or 0)
+            claimed = await self._patch_where(
+                {
+                    "id": f"eq.{row['id']}",
+                    "status": f"eq.{row['status']}",
+                    "attempts": f"eq.{attempts}",
+                },
+                {
+                    "status": "planning" if phase == "plan" else "researching",
+                    "attempts": attempts + 1,
+                    "worker_id": worker_id,
+                    "lease_expires_at": _iso(datetime.now(UTC) + timedelta(seconds=lease_seconds)),
+                },
+            )
+            if claimed:  # another worker may have won the race; the guards make this atomic
+                plan = row.get("research_plan")
+                return ClaimedJob(
+                    session_id=row["id"],
+                    question=row["research_question"],
+                    phase=phase,
+                    plan=ResearchPlan.model_validate(plan) if plan else None,
+                    attempts=attempts + 1,
+                )
+        return None
+
+    async def renew_lease(self, session_id: str, worker_id: str, lease_seconds: int) -> bool:
+        rows = await self._patch_where(
+            {"id": f"eq.{session_id}", "worker_id": f"eq.{worker_id}", "status": f"not.in.({_terminal()})"},
+            {"lease_expires_at": _iso(datetime.now(UTC) + timedelta(seconds=lease_seconds))},
+        )
+        return bool(rows)
+
+    async def recover_stale(self, max_attempts: int) -> tuple[int, int]:
+        now = _iso(datetime.now(UTC))
+        running = ",".join(s.value for s in RUNNING_STATUSES)
+        stale = await self._req(
+            "GET",
+            "/research_sessions",
+            params={
+                "status": f"in.({running})",
+                "or": f'(lease_expires_at.is.null,lease_expires_at.lt."{now}")',
+                "select": "id,status,attempts,protocol_approved_at",
+            },
+        )
+        requeued = failed = 0
+        for row in stale or []:
+            attempts = int(row.get("attempts") or 0)
+            guard = {"id": f"eq.{row['id']}", "status": f"eq.{row['status']}", "attempts": f"eq.{attempts}"}
+            if attempts >= max_attempts:
+                fields = {
+                    "status": "failed",
+                    "error_message": INTERRUPTED_MESSAGE.format(n=attempts),
+                    "completed_at": now,
+                    "worker_id": None,
+                    "lease_expires_at": None,
+                }
+            else:
+                fields = {
+                    "status": "queued" if row.get("protocol_approved_at") else "pending",
+                    "worker_id": None,
+                    "lease_expires_at": None,
+                }
+            if await self._patch_where(guard, fields):
+                if fields["status"] == "failed":
+                    failed += 1
+                else:
+                    requeued += 1
+        return requeued, failed
+
+    async def finish_planning(self, session_id: str) -> None:
+        await self._patch_where(
+            {"id": f"eq.{session_id}", "status": "eq.planning"},
+            {"status": "awaiting_approval", "worker_id": None, "lease_expires_at": None, "attempts": 0},
+        )
+
+    async def update_plan(self, session_id: str, plan: ResearchPlan) -> bool:
+        rows = await self._patch_where(
+            {"id": f"eq.{session_id}", "status": "eq.awaiting_approval"},
+            {"research_plan": plan.model_dump(mode="json")},
+        )
+        return bool(rows)
+
+    async def approve(self, session_id: str, plan: ResearchPlan) -> bool:
+        rows = await self._patch_where(
+            {"id": f"eq.{session_id}", "status": "eq.awaiting_approval"},
+            {
+                "research_plan": plan.model_dump(mode="json"),
+                "status": "queued",
+                "protocol_approved_at": _iso(datetime.now(UTC)),
+                "attempts": 0,
+            },
+        )
+        return bool(rows)
+
+    async def cancel(self, session_id: str) -> bool:
+        rows = await self._patch_where(
+            {"id": f"eq.{session_id}", "status": f"not.in.({_terminal()})"},
+            {
+                "status": "cancelled",
+                "completed_at": _iso(datetime.now(UTC)),
+                "worker_id": None,
+                "lease_expires_at": None,
+            },
+        )
+        return bool(rows)
+
+    async def get_status(self, session_id: str) -> SessionStatus | None:
+        rows = await self._req(
+            "GET", "/research_sessions", params={"id": f"eq.{session_id}", "select": "status"}
+        )
+        return SessionStatus(rows[0]["status"]) if rows else None
+
+    async def reset_run(self, session_id: str) -> None:
+        """Clear outputs of an earlier, interrupted attempt so a retry starts clean."""
+        sid = f"eq.{session_id}"
+        await self._req("DELETE", "/evidence_records", params={"session_id": sid})
+        await self._req("DELETE", "/research_reports", params={"session_id": sid})
+        await self._req(
+            "DELETE", "/agent_executions", params={"session_id": sid, "agent_name": "neq.research_planner"}
+        )
+
+    async def save_audit(self, session_id: str, audit: dict[str, Any]) -> None:
+        await self._update_session(session_id, {"run_audit": audit})
+
     async def set_status(self, session_id: str, status: SessionStatus) -> None:
-        await self._update_session(session_id, {"status": status.value})
+        # Progress updates never override a cancelled or finished session.
+        await self._patch_where(
+            {"id": f"eq.{session_id}", "status": f"not.in.({_terminal()})"}, {"status": status.value}
+        )
 
     async def save_plan(self, session_id: str, plan: ResearchPlan) -> None:
         await self._update_session(session_id, {"research_plan": plan.model_dump(mode="json")})
@@ -147,44 +306,33 @@ class SupabaseSessionRepository:
                 "report_content": report.model_dump(mode="json"),
             },
         )
-        await self._update_session(
-            session_id,
+        await self._patch_where(
+            {"id": f"eq.{session_id}", "status": "neq.cancelled"},
             {
                 "status": "completed",
                 "evidence_profile": profile,
                 "warnings": warnings,
                 "completed_at": datetime.now(UTC).isoformat(),
+                "worker_id": None,
+                "lease_expires_at": None,
             },
         )
 
     async def fail(
         self, session_id: str, error: str, profile: dict[str, Any] | None, warnings: list[str]
     ) -> None:
-        await self._update_session(
-            session_id,
+        await self._patch_where(
+            {"id": f"eq.{session_id}", "status": "neq.cancelled"},
             {
                 "status": "failed",
                 "error_message": error[:1000],
                 "evidence_profile": profile,
                 "warnings": warnings,
                 "completed_at": datetime.now(UTC).isoformat(),
+                "worker_id": None,
+                "lease_expires_at": None,
             },
         )
-
-    async def fail_interrupted(self) -> int:
-        active = ",".join(s.value for s in ACTIVE_STATUSES)
-        rows = await self._req(
-            "PATCH",
-            "/research_sessions",
-            params={"status": f"in.({active})"},
-            prefer="return=representation",
-            json={
-                "status": "failed",
-                "error_message": "Interrupted: the server restarted while this research was running.",
-                "completed_at": datetime.now(UTC).isoformat(),
-            },
-        )
-        return len(rows or [])
 
     # -- reads --------------------------------------------------------------------------------------------
     async def get_session(self, session_id: str) -> tuple[SessionDetail, str | None] | None:
@@ -229,6 +377,9 @@ class SupabaseSessionRepository:
             warnings=row.get("warnings") or [],
             error_message=row.get("error_message"),
             report=ResearchReport.model_validate(reports["report_content"]) if reports else None,
+            protocol_approved_at=row.get("protocol_approved_at"),
+            attempts=row.get("attempts") or 0,
+            run_audit=row.get("run_audit"),
         )
         return detail, row.get("user_id")
 
@@ -248,7 +399,7 @@ class SupabaseSessionRepository:
                 "user_id": f"eq.{user_id}",
                 "order": "created_at.desc",
                 "limit": str(limit),
-                "select": "id,research_question,status,demo_mode,created_at,completed_at",
+                "select": "id,research_question,status,demo_mode,created_at,completed_at,attempts",
             },
         )
         return [
@@ -259,9 +410,18 @@ class SupabaseSessionRepository:
                 demo_mode=r["demo_mode"],
                 created_at=r["created_at"],
                 completed_at=r["completed_at"],
+                attempts=r.get("attempts") or 0,
             )
             for r in rows or []
         ]
+
+
+def _iso(dt: datetime) -> str:
+    return dt.astimezone(UTC).isoformat()
+
+
+def _terminal() -> str:
+    return ",".join(s.value for s in TERMINAL_STATUSES)
 
 
 def _evidence_to_row(session_id: str, position: int, r: EvidenceRecord) -> dict[str, Any]:
