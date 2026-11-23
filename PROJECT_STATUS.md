@@ -25,8 +25,8 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 - Deployment (Render blueprint `render.yaml`, `frontend/vercel.json`) — not deployed.
 
 ## Next steps (priority order)
-1. Run the demo question through the frontend (`npm run dev`) and check the workspace/results screens with real data.
-2. Verify Supabase sign-in in the browser and the Saved Research page for a signed-in user.
+1. ~~Frontend with real data~~ done.
+2. ~~Supabase sign-in + saved sessions~~ done.
 3. Push to GitHub → deploy backend on Render, frontend on Vercel → set CORS/env → live test in a fresh browser.
 4. Run the demo question; keep one verified completed session as the dated backup.
 5. Interview prep doc (overview, architecture diagram, challenges, limitations, demo script).
@@ -39,7 +39,7 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 - Full-page `/login` and `/signup` replace the old modal; every app page requires sign-in (`RequireAuth`), returning the user to the page they asked for.
 - Dashboard and Saved research list the signed-in account's sessions.
 - Local `.env` uses `DEMO_MODE=false`: the API returns 401 to signed-out research requests (verified with curl).
-- Not yet verified in a browser with a real account.
+- Verified 2026-11-23: account created in the browser, research run completed and saved with the user as owner, listed under Saved research.
 
 ## Known limitations
 - Background execution is an in-process asyncio task: not durable across restarts (interrupted sessions are marked failed on startup).
