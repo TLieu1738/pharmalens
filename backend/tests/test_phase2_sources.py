@@ -178,6 +178,23 @@ async def test_chembl_mechanisms_carry_target_symbols() -> None:
     assert rec.metadata["inchi_key"] is None  # antibody: no small-molecule structure
 
 
+async def test_chembl_mechanisms_are_looked_up_by_parent_molecule() -> None:
+    """Mechanisms filed under a salt form (e.g. donepezil hydrochloride) must still be found for the parent drug."""
+    mech_params: list[dict[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/molecule/search.json"):
+            return httpx.Response(200, json=fixture_json("chembl_molecule_search.json"))
+        if request.url.path.endswith("/mechanism.json"):
+            mech_params.append(dict(request.url.params))
+        return httpx.Response(200, json=fixture_json("chembl_mechanism.json"))
+
+    async with mock_http(handler) as http:
+        await search_compounds(http, ["lecanemab"])
+    assert mech_params and all(p.get("parent_molecule_chembl_id") == "CHEMBL3833321" for p in mech_params)
+    assert all("molecule_chembl_id" not in p for p in mech_params)
+
+
 # ------------------------------------------------------------------------------------------- record checks
 def test_new_sources_reject_malformed_records() -> None:
     (oa, *_) = parse_openalex(fixture_json("openalex_works.json"))

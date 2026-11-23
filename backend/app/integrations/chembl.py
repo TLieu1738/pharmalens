@@ -54,11 +54,14 @@ async def search_compounds(
 async def _search_one(http: SourceHttpClient, name: str, limit: int) -> list[EvidenceRecord]:
     data = await http.get_json(SOURCE, f"{BASE_URL}/molecule/search.json", {"q": name, "limit": limit})
     molecules = parse_molecules(data, query=name)
-    # Enrich with mechanism of action (best-effort)
+    # Enrich with mechanism of action (best-effort). ChEMBL often files a small molecule's mechanism under its salt
+    # form (e.g. donepezil hydrochloride), so query by parent molecule, which also covers the molecule itself.
     mech_results = await asyncio.gather(
         *(
             http.get_json(
-                SOURCE, f"{BASE_URL}/mechanism.json", {"molecule_chembl_id": m.source_identifier, "limit": 5}
+                SOURCE,
+                f"{BASE_URL}/mechanism.json",
+                {"parent_molecule_chembl_id": m.source_identifier, "limit": 5},
             )
             for m in molecules
         ),
