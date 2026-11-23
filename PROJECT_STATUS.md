@@ -17,17 +17,19 @@ _Last updated: 2026-11-22 (evening). Interview demo: Tuesday 2026-11-24._
 | Running servers: health, 503 without key, 422 validation, SPA deep links | curl against local uvicorn + vite |
 | **Live end-to-end run with the real LLM** on the demo Alzheimer's question | 2026-11-22 via the API: all 7 agents completed in ~60 s (synthesis ~45 s); 72 records from 5 sources (30 papers, 20 trials, 15 targets, 7 compounds); 44 report statements, 0 removed as unsupported, 0 invalid citations |
 
+| **Deployed stack (live)** | 2026-11-23: frontend https://pharmalens-ten.vercel.app + API https://pharmalens-api-1e8g.onrender.com. Scripted test with two temporary Supabase users (deleted afterwards): research run via the deployed API completed in 58 s, all 5 sources ok, 45 statements / 61 refs / 0 unsupported; user B gets 404 on A's session and sees 0 rows via RLS; CORS allows only the Vercel origin; `/docs` hidden in production; no secrets in the JS bundle. |
+
 **Test suite:** 60 passed (`cd backend && .venv/bin/pytest`).
 
 ## Implemented but NOT yet verified
 - Supabase Auth sign-in UI and backend token verification against a real project.
 - Frontend results/workspace screens with real data (built against the typed API; not yet exercised with a live run).
-- Deployment (Render blueprint `render.yaml`, `frontend/vercel.json`) — not deployed.
+- Forgot/reset password pages (`/forgot-password`, `/reset-password`) — built, not yet tested with a real reset email.
 
 ## Next steps (priority order)
 1. ~~Frontend with real data~~ done.
 2. ~~Supabase sign-in + saved sessions~~ done.
-3. Push to GitHub → deploy backend on Render, frontend on Vercel → set CORS/env → live test in a fresh browser.
+3. ~~Deploy~~ done. Remaining: test password reset on the live site; keep backend awake before the demo (UptimeRobot or open early).
 4. Run the demo question; keep one verified completed session as the dated backup.
 5. Interview prep doc (overview, architecture diagram, challenges, limitations, demo script).
 

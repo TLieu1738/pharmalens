@@ -37,6 +37,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signOut() {
         await supabase?.auth.signOut()
       },
+      async requestPasswordReset(email) {
+        if (!supabase) throw new Error('Authentication is not configured.')
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        })
+        if (error) throw new Error(error.message)
+      },
+      async updatePassword(password) {
+        if (!supabase) throw new Error('Authentication is not configured.')
+        const { error } = await supabase.auth.updateUser({ password })
+        if (error) throw new Error(error.message)
+      },
     }),
     [loading, session],
   )

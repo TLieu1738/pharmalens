@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Logo } from '@/components/layout/Logo'
+import { AuthShell, FormMessage, inputClass, submitClass } from '@/components/auth/AuthShell'
 import { useAuth } from '@/hooks/useAuth'
 
 type Mode = 'signin' | 'signup'
@@ -62,70 +62,52 @@ export default function AuthPage({ mode }: { mode: Mode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <main className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex justify-center">
-            <Logo />
-          </div>
-          <form onSubmit={submit} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="auth-title">
-            <h1 id="auth-title" className="text-lg font-semibold text-ink-900">
-              {copy.title}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">{copy.subtitle}</p>
+    <AuthShell
+      below={
+        <>
+          {copy.switchText}{' '}
+          <Link to={copy.switchTo} state={location.state} className="font-medium text-accent-700 hover:underline">
+            {copy.switchLink}
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={submit} aria-labelledby="auth-title">
+        <h1 id="auth-title" className="text-lg font-semibold text-ink-900">
+          {copy.title}
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">{copy.subtitle}</p>
 
-            <label className="mt-6 block text-xs font-medium text-slate-600">
-              Email
-              <input
-                type="email"
-                required
-                autoFocus
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
-              />
-            </label>
-            <label className="mt-4 block text-xs font-medium text-slate-600">
-              Password
-              <input
-                type="password"
-                required
-                minLength={8}
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
-              />
-              {mode === 'signup' && <span className="mt-1 block font-normal text-slate-400">At least 8 characters.</span>}
-            </label>
-
-            {message && (
-              <p role={message.tone === 'error' ? 'alert' : 'status'} className={`mt-4 text-sm ${message.tone === 'error' ? 'text-rose-700' : 'text-accent-700'}`}>
-                {message.text}
-              </p>
+        <label className="mt-6 block text-xs font-medium text-slate-600">
+          Email
+          <input type="email" required autoFocus autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+        </label>
+        <label className="mt-4 block text-xs font-medium text-slate-600">
+          <span className="flex items-baseline justify-between">
+            Password
+            {mode === 'signin' && (
+              <Link to="/forgot-password" className="font-medium text-accent-700 hover:underline">
+                Forgot password?
+              </Link>
             )}
+          </span>
+          <input
+            type="password"
+            required
+            minLength={8}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+          />
+          {mode === 'signup' && <span className="mt-1 block font-normal text-slate-400">At least 8 characters.</span>}
+        </label>
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="mt-6 w-full rounded-md bg-ink-900 py-2.5 text-sm font-medium text-white hover:bg-ink-800 disabled:bg-slate-300"
-            >
-              {busy ? 'Please wait…' : copy.submit}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-slate-500">
-            {copy.switchText}{' '}
-            <Link to={copy.switchTo} state={location.state} className="font-medium text-accent-700 hover:underline">
-              {copy.switchLink}
-            </Link>
-          </p>
-        </div>
-      </main>
-      <footer className="px-6 py-4 text-center text-xs text-slate-400">
-        Research-support tool. Outputs are informational and must be verified by qualified researchers.
-      </footer>
-    </div>
+        <FormMessage message={message} />
+        <button type="submit" disabled={busy} className={submitClass}>
+          {busy ? 'Please wait…' : copy.submit}
+        </button>
+      </form>
+    </AuthShell>
   )
 }

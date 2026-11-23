@@ -9,6 +9,8 @@ export interface AuthState {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>
   signOut: () => Promise<void>
+  requestPasswordReset: (email: string) => Promise<void>
+  updatePassword: (password: string) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthState | null>(null)
