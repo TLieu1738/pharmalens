@@ -8,7 +8,7 @@ export function AuthShell({ children, below }: { children: ReactNode; below?: Re
       <main className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex justify-center">
-            <Logo />
+            <Logo size="lg" />
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">{children}</div>
           {below && <div className="mt-6 text-center text-sm text-slate-500">{below}</div>}
